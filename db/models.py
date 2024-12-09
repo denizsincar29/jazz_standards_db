@@ -26,5 +26,5 @@ class UserJazzStandard(Base):
     user = relationship("User", backref=backref("user_jazz_standards", cascade="all, delete-orphan"))
     jazz_standard = relationship("JazzStandard", backref=backref("user_jazz_standards", cascade="all, delete-orphan"))
 
-User.jazz_standards = relationship("UserJazzStandard", back_populates="user")
-JazzStandard.users = relationship("UserJazzStandard", back_populates="jazz_standard")
+User.jazz_standards = relationship("UserJazzStandard", back_populates="user", overlaps="user_jazz_standards")
+JazzStandard.users = relationship("UserJazzStandard", back_populates="jazz_standard", overlaps="user_jazz_standards")

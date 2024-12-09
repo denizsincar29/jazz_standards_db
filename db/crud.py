@@ -22,7 +22,7 @@ def create_user(db: Session, username: str, name: str):
 def get_user(db: Session, user_id: int = None, username: str = None):
     query = select(models.User)
     if user_id:
-        return db.execute(query.where(models.User.id == user_id)).scalars().first()
+        return db.execute(query.where(models.User.id == user_id)).scalar()
     if username:
         stmt = select(models.User).where(models.User.username == username)
         return db.scalars(stmt).first()
