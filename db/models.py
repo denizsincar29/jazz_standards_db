@@ -16,6 +16,14 @@ class User(Base):
             return f"{self.name} #{self.username}"  # when sudo su, prompt changes to #, so this is a joke
         return f"{self.name} @{self.username}"
 
+    def __dict__(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "name": self.name,
+            "is_admin": self.is_admin
+        }
+
 class JazzStandard(Base):
     __tablename__ = "jazz_standards"
     id = Column(Integer, primary_key=True)
@@ -26,6 +34,12 @@ class JazzStandard(Base):
         return f"{self.title} by {self.composer}"
     
 
+    def __dict__(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "composer": self.composer
+        }
 class UserJazzStandard(Base):
     __tablename__ = "user_jazz_standards"
     user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
