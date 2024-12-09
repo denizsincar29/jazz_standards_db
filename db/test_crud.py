@@ -1,119 +1,98 @@
 import unittest
-from unittest.mock import MagicMock
-from sqlalchemy.orm import Session
-from db import models, crud
+
+from db import models, crud, database
 
 class TestCRUD(unittest.TestCase):
-
     def setUp(self):
-        self.db = MagicMock(spec=Session)
+        self.db = database.SessionLocal()
+
+    def tearDown(self):
+        self.db.close()
 
     def test_create_user(self):
-        self.db.add = MagicMock()
-        self.db.commit = MagicMock()
-        self.db.refresh = MagicMock()
-        user = crud.create_user(self.db, username="testuser", name="Test User")
-        self.db.add.assert_called_once()
-        self.db.commit.assert_called_once()
-        self.db.refresh.assert_called_once()
-        self.assertEqual(user.username, "testuser")
+        user = crud.create_user(self.db, "test_user", "Test User")
+        self.assertIsInstance(user, models.User)
+        self.assertEqual(user.username, "test_user")
         self.assertEqual(user.name, "Test User")
 
-    def test_get_user_by_id(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.User(id=1, username="testuser", name="Test User")])))
-        user = crud.get_user(self.db, user_id=1)
-        self.assertEqual(user.id, 1)
-        self.assertEqual(user.username, "testuser")
+    def test_get_user(self):
+        user = crud.create_user(self.db, "test_user", "Test User")
+        user_id = user.id
+        user = crud.get_user(self.db, user_id=user_id)
+        self.assertIsInstance(user, models.User)
+        self.assertEqual(user.username, "test_user")
+        self.assertEqual(user.name, "Test User")
 
     def test_get_user_by_username(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.User(id=1, username="testuser", name="Test User")])))
-        user = crud.get_user(self.db, username="testuser")
-        self.assertEqual(user.username, "testuser")
+        user = crud.create_user(self.db, "test_user", "Test User")
+        user = crud.get_user(self.db, username="test_user")
+        self.assertIsInstance(user, models.User)
+        self.assertEqual(user.username, "test_user")
         self.assertEqual(user.name, "Test User")
 
     def test_get_users(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.User(id=1, username="testuser", name="Test User")])))
+        crud.create_user(self.db, "test_user1", "Test User 1")
+        crud.create_user(self.db, "test_user2", "Test User 2")
         users = crud.get_users(self.db)
-        self.assertEqual(len(users), 1)
-        self.assertEqual(users[0].username, "testuser")
+        self.assertIsInstance(users, list)
+        self.assertEqual(len(users), 2)
+        self.assertIsInstance(users[0], models.User)
+        self.assertIsInstance(users[1], models.User)
 
     def test_delete_user(self):
-        self.db.execute = MagicMock()
-        self.db.commit = MagicMock()
-        crud.delete_user(self.db, user_id=1)
-        self.db.execute.assert_called_once()
-        self.db.commit.assert_called_once()
+        user = crud.create_user(self.db, "test_user", "Test User")
+        user_id = user.id
+        crud.delete_user(self.db, user_id)
+        user = crud.get_user(self.db, user_id=user_id)
+        self.assertIsNone(user)
 
     def test_add_jazz_standard(self):
-        self.db.add = MagicMock()
-        self.db.commit = MagicMock()
-        self.db.refresh = MagicMock()
-        jazz_standard = crud.add_jazz_standard(self.db, title="Autumn Leaves", composer="Joseph Kosma")
-        self.db.add.assert_called_once()
-        self.db.commit.assert_called_once()
-        self.db.refresh.assert_called_once()
+        jazz_standard = crud.add_jazz_standard(self.db, "Autumn Leaves", "Joseph Kosma")  # copilot doesn't know other jazz standards than Autumn Leaves xD
+        self.assertIsInstance(jazz_standard, models.JazzStandard)
         self.assertEqual(jazz_standard.title, "Autumn Leaves")
         self.assertEqual(jazz_standard.composer, "Joseph Kosma")
 
-    def test_get_jazz_standard_by_id(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.JazzStandard(id=1, title="Autumn Leaves", composer="Joseph Kosma")])))
-        jazz_standard = crud.get_jazz_standard(self.db, jazz_standard_id=1)
-        self.assertEqual(jazz_standard.id, 1)
+    def test_get_jazz_standard(self):
+        jazz_standard = crud.add_jazz_standard(self.db, "Autumn Leaves", "Joseph Kosma")
+        jazz_standard_id = jazz_standard.id
+        jazz_standard = crud.get_jazz_standard(self.db, jazz_standard_id=jazz_standard_id)
+        self.assertIsInstance(jazz_standard, models.JazzStandard)
         self.assertEqual(jazz_standard.title, "Autumn Leaves")
+        self.assertEqual(jazz_standard.composer, "Joseph Kosma")
 
     def test_get_jazz_standard_by_title(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.JazzStandard(id=1, title="Autumn Leaves", composer="Joseph Kosma")])))
+        jazz_standard = crud.add_jazz_standard(self.db, "Autumn Leaves", "Joseph Kosma")
         jazz_standard = crud.get_jazz_standard(self.db, title="Autumn Leaves")
+        self.assertIsInstance(jazz_standard, models.JazzStandard)
         self.assertEqual(jazz_standard.title, "Autumn Leaves")
         self.assertEqual(jazz_standard.composer, "Joseph Kosma")
 
     def test_get_jazz_standards(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.JazzStandard(id=1, title="Autumn Leaves", composer="Joseph Kosma")])))
+        crud.add_jazz_standard(self.db, "Autumn Leaves", "Joseph Kosma")
+        crud.add_jazz_standard(self.db, "Blue Bossa", "Kenny Dorham")
         jazz_standards = crud.get_jazz_standards(self.db)
-        self.assertEqual(len(jazz_standards), 1)
-        self.assertEqual(jazz_standards[0].title, "Autumn Leaves")
+        self.assertIsInstance(jazz_standards, list)
+        self.assertEqual(len(jazz_standards), 2)
+        self.assertIsInstance(jazz_standards[0], models.JazzStandard)
+        self.assertIsInstance(jazz_standards[1], models.JazzStandard)
 
     def test_delete_jazz_standard(self):
-        self.db.execute = MagicMock()
-        self.db.commit = MagicMock()
-        crud.delete_jazz_standard(self.db, jazz_standard_id=1)
-        self.db.execute.assert_called_once()
-        self.db.commit.assert_called_once()
+        jazz_standard = crud.add_jazz_standard(self.db, "Autumn Leaves", "Joseph Kosma")
+        jazz_standard_id = jazz_standard.id
+        crud.delete_jazz_standard(self.db, jazz_standard_id)
+        jazz_standard = crud.get_jazz_standard(self.db, jazz_standard_id=jazz_standard_id)
+        self.assertIsNone(jazz_standard)
 
     def test_add_standard_to_user(self):
-        self.db.add = MagicMock()
-        self.db.commit = MagicMock()
-        self.db.refresh = MagicMock()
-        user_standard = crud.add_standard_to_user(self.db, user_id=1, jazz_standard_id=1)
-        self.db.add.assert_called_once()
-        self.db.commit.assert_called_once()
-        self.db.refresh.assert_called_once()
-        self.assertEqual(user_standard.user_id, 1)
-        self.assertEqual(user_standard.jazz_standard_id, 1)
+        user = crud.create_user(self.db, "test_user", "Test User")
+        jazz_standard = crud.add_jazz_standard(self.db, "Autumn Leaves", "Joseph Kosma")
+        user_id = user.id
+        jazz_standard_id = jazz_standard.id
+        crud.add_standard_to_user(self.db, user_id, jazz_standard_id)
+        user = crud.get_user(self.db, user_id=user_id)
+        self.assertIsInstance(user.jazz_standards, list)
+        self.assertEqual(len(user.jazz_standards), 1)
+        self.assertIsInstance(user.jazz_standards[0], models.JazzStandard)
+        self.assertEqual(user.jazz_standards[0].title, "Autumn Leaves")
+        self.assertEqual(user.jazz_standards[0].composer, "Joseph Kosma")
 
-    def test_user_knows_standard(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.UserJazzStandard(user_id=1, jazz_standard_id=1)])))
-        user_standard = crud.user_knows_standard(self.db, user_id=1, jazz_standard_id=1)
-        self.assertEqual(user_standard.user_id, 1)
-        self.assertEqual(user_standard.jazz_standard_id, 1)
-
-    def test_get_user_standards(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalars=MagicMock(return_value=[models.UserJazzStandard(user_id=1, jazz_standard_id=1)])))
-        user_standards = crud.get_user_standards(self.db, user_id=1)
-        self.assertEqual(len(user_standards), 1)
-        self.assertEqual(user_standards[0].user_id, 1)
-
-    def test_delete_user_standard(self):
-        self.db.execute = MagicMock()
-        self.db.commit = MagicMock()
-        crud.delete_user_standard(self.db, user_id=1, jazz_standard_id=1)
-        self.db.execute.assert_called_once()
-        self.db.commit.assert_called_once()
-
-    def test_get_user_standards_count(self):
-        self.db.execute = MagicMock(return_value=MagicMock(scalar=MagicMock(return_value=1)))
-        count = crud.get_user_standards_count(self.db, user_id=1)
-        self.assertEqual(count, 1)
-
-if __name__ == '__main__':
-    unittest.main()

@@ -20,17 +20,16 @@ def create_user(db: Session, username: str, name: str):
     return db_user
 
 def get_user(db: Session, user_id: int = None, username: str = None):
-    query = select(models.User)
     if user_id:
         return db.get(models.User, user_id)
     if username:
         stmt = select(models.User).where(models.User.username == username)
-        return db.scalars(stmt).first()
+        return db.execute(stmt).first()
     return None
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     query = select(models.User).offset(skip).limit(limit)
-    return db.execute(query).scalars().all()
+    return db.execute(query).all()
 
 def delete_user(db: Session, user_id: int):
     try:
@@ -52,12 +51,12 @@ def get_jazz_standard(db: Session, jazz_standard_id: int = None, title: str = No
     if jazz_standard_id:
         return db.get(models.JazzStandard, jazz_standard_id)
     if title:
-        return db.execute(query.where(models.JazzStandard.title == title)).scalar()
+        return db.execute(query.where(models.JazzStandard.title == title)).first()
     return None
 
 def get_jazz_standards(db: Session, skip: int = 0, limit: int = 100):
     query = select(models.JazzStandard).offset(skip).limit(limit)
-    return db.execute(query).scalars()
+    return db.execute(query).all()
 
 def delete_jazz_standard(db: Session, jazz_standard_id: int):
     try:
@@ -76,11 +75,11 @@ def add_standard_to_user(db: Session, user_id: int, jazz_standard_id: int):
 
 def user_knows_standard(db: Session, user_id: int, jazz_standard_id: int):
     query = select(models.UserJazzStandard).where(models.UserJazzStandard.user_id == user_id).where(models.UserJazzStandard.jazz_standard_id == jazz_standard_id)
-    return db.execute(query).scalars().first()
+    return db.execute(query).first()
 
 def get_user_standards(db: Session, user_id: int):
     query = select(models.UserJazzStandard).where(models.UserJazzStandard.user_id == user_id)
-    return db.execute(query).scalars().all()
+    return db.execute(query).all()
 
 def delete_user_standard(db: Session, user_id: int, jazz_standard_id: int):
     try:
