@@ -54,6 +54,14 @@ def get_jazz_standard(db: Session, jazz_standard_id: int = None, title: str = No
         return db.execute(query.where(models.JazzStandard.title == title)).scalars().first()
     return None
 
+def search_jazz_standard(db: Session, search: str):
+    query = select(models.JazzStandard).where(models.JazzStandard.title.ilike(f"%{search}%"))
+    return db.execute(query).scalars().all()
+
+def get_standards_by_composer(db: Session, composer: str):
+    query = select(models.JazzStandard).where(models.JazzStandard.composer.ilike(f"%{composer}%"))
+    return db.execute(query).scalars().all()
+
 def get_jazz_standards(db: Session, skip: int = 0, limit: int = 100):
     query = select(models.JazzStandard).offset(skip).limit(limit)
     return db.execute(query).scalars().all()
