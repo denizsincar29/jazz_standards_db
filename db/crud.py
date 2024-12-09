@@ -52,12 +52,12 @@ def get_jazz_standard(db: Session, jazz_standard_id: int = None, title: str = No
     if jazz_standard_id:
         return db.get(models.JazzStandard, jazz_standard_id)
     if title:
-        return db.execute(query.where(models.JazzStandard.title == title)).scalars().first()
+        return db.execute(query.where(models.JazzStandard.title == title)).scalar()
     return None
 
 def get_jazz_standards(db: Session, skip: int = 0, limit: int = 100):
     query = select(models.JazzStandard).offset(skip).limit(limit)
-    return db.execute(query).scalars().all()
+    return db.execute(query).scalars()
 
 def delete_jazz_standard(db: Session, jazz_standard_id: int):
     try:
