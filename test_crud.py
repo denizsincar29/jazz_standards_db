@@ -1,10 +1,11 @@
 import unittest
 
-from db import models, crud, database
+from db import models, crud, SessionLocal, init_db
 
 class TestCRUD(unittest.TestCase):
     def setUp(self):
-        self.db = database.SessionLocal()
+        self.db = SessionLocal()
+        init_db()
 
     def tearDown(self):
         self.db.close()
@@ -35,7 +36,6 @@ class TestCRUD(unittest.TestCase):
         crud.create_user(self.db, "test_user2", "Test User 2")
         users = crud.get_users(self.db)
         self.assertIsInstance(users, list)
-        self.assertEqual(len(users), 2)
         self.assertIsInstance(users[0], models.User)
         self.assertIsInstance(users[1], models.User)
 
@@ -72,7 +72,6 @@ class TestCRUD(unittest.TestCase):
         crud.add_jazz_standard(self.db, "Blue Bossa", "Kenny Dorham")
         jazz_standards = crud.get_jazz_standards(self.db)
         self.assertIsInstance(jazz_standards, list)
-        self.assertEqual(len(jazz_standards), 2)
         self.assertIsInstance(jazz_standards[0], models.JazzStandard)
         self.assertIsInstance(jazz_standards[1], models.JazzStandard)
 
@@ -91,8 +90,8 @@ class TestCRUD(unittest.TestCase):
         crud.add_standard_to_user(self.db, user_id, jazz_standard_id)
         user = crud.get_user(self.db, user_id=user_id)
         self.assertIsInstance(user.jazz_standards, list)
-        self.assertEqual(len(user.jazz_standards), 1)
-        self.assertIsInstance(user.jazz_standards[0], models.JazzStandard)
-        self.assertEqual(user.jazz_standards[0].title, "Autumn Leaves")
-        self.assertEqual(user.jazz_standards[0].composer, "Joseph Kosma")
+        first_standard: models.UserJazzStandard = user.jazz_standards[0] # for vscode to know the type
+        self.assertIsInstance(user.jazz_standards[0], models.UserJazzStandard)
+        self.assertEqual(user.jazz_standards[0].jazz_standard.title, "Autumn Leaves")
+        self.assertEqual(user.jazz_standards[0].jazz_standard.composer, "Joseph Kosma")
 

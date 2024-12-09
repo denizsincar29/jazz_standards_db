@@ -20,6 +20,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Базовый класс для объявления моделей
 Base = declarative_base()
 
+def init_db():
+    from db import models  # to load the base classes
+    Base.metadata.create_all(bind=engine)
+
 # Функция-генератор для получения сессии, автоматически закрывает сессию после использования
 @contextmanager
 def get_db():

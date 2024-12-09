@@ -21,8 +21,6 @@ class UserJazzStandard(Base):
     __tablename__ = "user_jazz_standards"
     user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
     jazz_standard_id = Column(Integer, ForeignKey('jazz_standards.id'), primary_key=True)
-    learned_on = Column(DateTime, default=datetime.utcnow)
-
     user = relationship("User", backref=backref("user_jazz_standards", cascade="all, delete-orphan"))
     jazz_standard = relationship("JazzStandard", backref=backref("user_jazz_standards", cascade="all, delete-orphan"))
 
