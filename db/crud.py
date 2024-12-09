@@ -22,7 +22,7 @@ def create_user(db: Session, username: str, name: str):
 def get_user(db: Session, user_id: int = None, username: str = None):
     query = select(models.User)
     if user_id:
-        return db.execute(query.where(models.User.id == user_id)).scalar()
+        return db.get(models.User, user_id)
     if username:
         stmt = select(models.User).where(models.User.username == username)
         return db.scalars(stmt).first()
@@ -50,7 +50,7 @@ def add_jazz_standard(db: Session, title: str, composer: str):
 def get_jazz_standard(db: Session, jazz_standard_id: int = None, title: str = None):
     query = select(models.JazzStandard)
     if jazz_standard_id:
-        return db.execute(query.where(models.JazzStandard.id == jazz_standard_id)).scalars().first()
+        return db.get(models.JazzStandard, jazz_standard_id)
     if title:
         return db.execute(query.where(models.JazzStandard.title == title)).scalars().first()
     return None
