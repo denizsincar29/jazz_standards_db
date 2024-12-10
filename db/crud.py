@@ -12,8 +12,8 @@ from db import models
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def create_user(db: Session, username: str, name: str):
-    db_user = models.User(username=username, name=name)
+def create_user(db: Session, username: str, name: str, is_admin: bool = False):
+    db_user = models.User(username=username, name=name, is_admin=is_admin)
     try:
         db.add(db_user)
         db.commit()

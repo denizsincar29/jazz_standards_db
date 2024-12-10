@@ -1,6 +1,10 @@
 import pytest
 import os
-os.environ["JAZZ_DB_FILE"] = ":memory:"  # Use in-memory database for testing
+try:
+    os.remove("test2.db")  # remove the test db file if it exists
+except FileNotFoundError:
+    pass
+os.environ["JAZZ_DB_FILE"] = "test2.db"  # because :memory: is doing some weird stuff
 from db import models, crud, SessionLocal, init_db  #noqa  # ruff warns me that not at the top of the file
 
 # This thing is used for getting sessions.

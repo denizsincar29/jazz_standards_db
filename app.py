@@ -17,10 +17,11 @@ def api_root(db: Session = Depends(get_db)):
     return response
 
 @app.post("/api/users/", response_model=schemas.User)
-def create_user(user: schemas.User, db: Session = Depends(get_db)):
-    r = crud.create_user(db, username=user.username, name=user.name)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    r = crud.create_user(db, username=user.username, name=user.name, is_admin=user.is_admin)
     if r is None:
         raise HTTPException(status_code=400, detail="Username already exists")
+    return r
 
 @app.get("/api/users/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, db: Session = Depends(get_db)):
@@ -43,7 +44,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return db_user
 
 @app.post("/api/jazz_standards/", response_model=schemas.JazzStandard)
-def create_jazz_standard(jazz_standard: schemas.JazzStandard, db: Session = Depends(get_db)):
+def create_jazz_standard(jazz_standard: schemas.JazzStandardCreate, db: Session = Depends(get_db)):
     r=crud.add_jazz_standard(db, title=jazz_standard.title, composer=jazz_standard.composer, style=jazz_standard.style)
     if r is None:
         raise HTTPException(status_code=400, detail="Jazz Standard already exists")
