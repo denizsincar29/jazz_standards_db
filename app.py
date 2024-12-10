@@ -1,5 +1,7 @@
 from typing import List
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from db import get_db, crud, engine, models, init_db
 import schemas
@@ -9,6 +11,7 @@ init_db()
 
 app = FastAPI()
 
+templates = Jinja2Templates(directory="templates")
 @app.get("/api/", response_model=schemas.Root)
 def api_root(db: Session = Depends(get_db)):
     users = crud.get_users(db)
@@ -86,3 +89,19 @@ def delete_user_standard(user_id: int, jazz_standard_id: int, db: Session = Depe
         raise HTTPException(status_code=404, detail="User Jazz Standard not found")
     crud.delete_user_standard(db, user_id=user_id, jazz_standard_id=jazz_standard_id)
     return db_user_standard
+
+
+# web routes
+@app.get("/", response_class=HTMLResponse)
+def read_root(request: Request):
+    # if there is no username cookie, redirect to templates/login.html
+    if "username" not in request.cookies:
+        return templates.TemplateResponse("login.html", {"request": request})
+    # if there is a username cookie, redirect to templates/index.html with template variable username
+    username = request.cookies["username"]
+    return templates.TemplateResponse(request, "index.html", {"username": username})
+
+@app.post("/login/", response_class=HTMLResponse)
+def login(username: str, response: Response):
+    response.set_cookie("username", username)
+    return RedirectResponse(url="/")
