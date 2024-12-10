@@ -1,13 +1,12 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import UniqueConstraint
 from db.database import Base
-from datetime import datetime
+import enum
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
-    username = Column(String, nullable=False)
+    username = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
 
@@ -16,30 +15,33 @@ class User(Base):
             return f"{self.name} #{self.username}"  # when sudo su, prompt changes to #, so this is a joke
         return f"{self.name} @{self.username}"
 
-    def __dict__(self):
-        return {
-            "id": self.id,
-            "username": self.username,
-            "name": self.name,
-            "is_admin": self.is_admin
-        }
+
+class JazzStyle(enum.Enum):
+    dixieland = "dixieland"
+    ragtime = "ragtime"
+    big_band = "big band"
+    bossa_nova = "bossa nova"
+    samba = "samba"
+    latin = "latin"
+    latin_swing = "latin swing"
+    swing = "swing"
+    waltz = "waltz"
+    bebop = "bebop"
+    modal = "modal"
+    free = "free"
+    fusion = "fusion"
 
 class JazzStandard(Base):
     __tablename__ = "jazz_standards"
     id = Column(Integer, primary_key=True)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False, unique=True)
     composer = Column(String, nullable=False)
+    style = Column(Enum(JazzStyle), nullable=False)
 
     def __repr__(self):
         return f"{self.title} by {self.composer}"
     
 
-    def __dict__(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "composer": self.composer
-        }
 class UserJazzStandard(Base):
     __tablename__ = "user_jazz_standards"
     user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)

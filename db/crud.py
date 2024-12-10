@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, delete
 from sqlalchemy import func
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import logging
 
 from db import models
@@ -14,8 +14,13 @@ logger = logging.getLogger(__name__)
 
 def create_user(db: Session, username: str, name: str):
     db_user = models.User(username=username, name=name)
-    db.add(db_user)
-    db.commit()
+    try:
+        db.add(db_user)
+        db.commit()
+    except IntegrityError as e:
+        logger.error(f"Ошибка при создании пользователя: {e}")
+        db.rollback()
+        return None
     db.refresh(db_user)
     return db_user
 
@@ -39,10 +44,15 @@ def delete_user(db: Session, user_id: int):
         logger.error(f"Ошибка при удалении пользователя: {e}")
         db.rollback()
 
-def add_jazz_standard(db: Session, title: str, composer: str):
-    db_jazz_standard = models.JazzStandard(title=title, composer=composer)
-    db.add(db_jazz_standard)
-    db.commit()
+def add_jazz_standard(db: Session, title: str, composer: str, style: models.JazzStyle):
+    db_jazz_standard = models.JazzStandard(title=title, composer=composer, style=style)
+    try:
+        db.add(db_jazz_standard)
+        db.commit()
+    except IntegrityError as e:
+        logger.error(f"Ошибка при добавлении стандарта: {e}")
+        db.rollback()
+        return None
     db.refresh(db_jazz_standard)
     return db_jazz_standard
 
@@ -62,6 +72,10 @@ def get_standards_by_composer(db: Session, composer: str):
     query = select(models.JazzStandard).where(models.JazzStandard.composer.ilike(f"%{composer}%"))
     return db.execute(query).scalars().all()
 
+def get_standards_by_style(db: Session, style: models.JazzStyle):
+    query = select(models.JazzStandard).where(models.JazzStandard.style == style)
+    return db.execute(query).scalars().all()
+
 def get_jazz_standards(db: Session, skip: int = 0, limit: int = 100):
     query = select(models.JazzStandard).offset(skip).limit(limit)
     return db.execute(query).scalars().all()
@@ -75,6 +89,10 @@ def delete_jazz_standard(db: Session, jazz_standard_id: int):
         db.rollback()
 
 def add_standard_to_user(db: Session, user_id: int, jazz_standard_id: int):
+    # check if user already knows the standard
+    if user_knows_standard(db, user_id, jazz_standard_id):
+        logger.info(f"Пользователь уже знает стандарт с id {jazz_standard_id}")
+        return None
     db_user_standard = models.UserJazzStandard(user_id=user_id, jazz_standard_id=jazz_standard_id)
     db.add(db_user_standard)
     db.commit()

@@ -5,8 +5,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 
 DB_FILE = os.getenv("JAZZ_DB_FILE", "jazz.db")
-
-SQLALCHEMY_DATABASE_URL = f"sqlite:///./{DB_FILE}"
+if DB_FILE == ":memory:":  # use in-memory database
+    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+else:
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///./{DB_FILE}"
 
 # Создание движка SQLAlchemy с подключением к базе данных SQLite
 engine = create_engine(
@@ -25,7 +27,7 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 # Функция-генератор для получения сессии, автоматически закрывает сессию после использования
-@contextmanager
+#@contextmanager
 def get_db():
     db = SessionLocal()
     try:
