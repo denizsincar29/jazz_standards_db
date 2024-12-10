@@ -103,5 +103,9 @@ def read_root(request: Request):
 
 @app.post("/login/", response_class=HTMLResponse)
 def login(username: str, response: Response):
+    # check if there is a user with the given username
+    user = crud.get_user_by_username(username)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     response.set_cookie("username", username)
     return RedirectResponse(url="/")
