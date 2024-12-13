@@ -31,6 +31,7 @@ class Root(BaseModel):
 class UserCreate(BaseModel):
     username: str
     name: str
+    password: str
     is_admin: bool
     model_config = ConfigDict(from_attributes=True)
 

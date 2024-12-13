@@ -1,20 +1,35 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum
-from sqlalchemy.orm import relationship, backref
-from db.database import Base
+from sqlalchemy import String, Boolean, ForeignKey, Enum, LargeBinary
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 import enum
+from db.database import Base
 
+# User's public data
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
-    username = Column(String, nullable=False, unique=True)
-    name = Column(String, nullable=False)
-    is_admin = Column(Boolean, default=False)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    private: Mapped["UserPrivate"] = relationship(back_populates="user", cascade="all, delete-orphan")
+    jazz_standards: Mapped[list["UserJazzStandard"]] = relationship(back_populates="user")
 
     def __repr__(self):
         if self.is_admin:
             return f"{self.name} #{self.username}"  # when sudo su, prompt changes to #, so this is a joke
         return f"{self.name} @{self.username}"
 
+# User's private data
+class UserPrivate(Base):
+    __tablename__ = "users_private"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    password_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    salt: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    token: Mapped[str | None] = mapped_column(String, nullable=True)  # for cookie-based auth
+
+    user: Mapped["User"] = relationship(back_populates="private")
 
 class JazzStyle(enum.Enum):
     dixieland = "dixieland"
@@ -33,24 +48,25 @@ class JazzStyle(enum.Enum):
 
 class JazzStandard(Base):
     __tablename__ = "jazz_standards"
-    id = Column(Integer, primary_key=True)
-    title = Column(String, nullable=False, unique=True)
-    composer = Column(String, nullable=False)
-    style = Column(Enum(JazzStyle), nullable=False)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    composer: Mapped[str] = mapped_column(String, nullable=False)
+    style: Mapped[JazzStyle] = mapped_column(Enum(JazzStyle), nullable=False)
+
+    users: Mapped[list["UserJazzStandard"]] = relationship(back_populates="jazz_standard")
 
     def __repr__(self):
         return f"{self.title} by {self.composer}"
-    
 
 class UserJazzStandard(Base):
     __tablename__ = "user_jazz_standards"
-    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
-    jazz_standard_id = Column(Integer, ForeignKey('jazz_standards.id'), primary_key=True)
-    user = relationship("User", backref=backref("user_jazz_standards", cascade="all, delete-orphan"))
-    jazz_standard = relationship("JazzStandard", backref=backref("user_jazz_standards", cascade="all, delete-orphan"))
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    jazz_standard_id: Mapped[int] = mapped_column(ForeignKey("jazz_standards.id"), primary_key=True)
+
+    user: Mapped["User"] = relationship(back_populates="jazz_standards")
+    jazz_standard: Mapped["JazzStandard"] = relationship(back_populates="users")
 
     def __repr__(self):
         return f"{self.user} plays {self.jazz_standard}"
-
-User.jazz_standards = relationship("UserJazzStandard", back_populates="user", overlaps="user_jazz_standards")
-JazzStandard.users = relationship("UserJazzStandard", back_populates="jazz_standard", overlaps="user_jazz_standards")

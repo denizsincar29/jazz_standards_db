@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
 DB_FILE = os.getenv("JAZZ_DB_FILE", "jazz.db")
@@ -20,7 +20,8 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Базовый класс для объявления моделей
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 def init_db():
     from db import models  # to load the base classes

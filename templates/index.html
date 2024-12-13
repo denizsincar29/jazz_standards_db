@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список джазовых стандартов</title>
+    <script>
+        const username = '{{ username }}';
+        async function fetchJazzStandards() {
+            const response = await fetch(`/api/users/${username}/jazz_standards/`);
+            const standards = await response.json();
+            const list = document.getElementById('jazz-standards-list');
+            list.innerHTML = '';
+            standards.forEach(standard => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${standard.title} - ${standard.composer} (${standard.style})`;
+                list.appendChild(listItem);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchJazzStandards();
+        });
+    </script>
+</head>
+<body>
+    <h1>{{ username }}!</h1>
+    <h2>Ваши джазовые стандарты:</h2>
+    <ul id="jazz-standards-list">
+        <!-- Джазовые стандарты будут загружены сюда -->
+    </ul>
+</body>
+</html>
