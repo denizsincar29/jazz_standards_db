@@ -15,6 +15,18 @@ def userstr(user):
     else:
         return {"username": user}
 
+# Function to check if the user is an username
+def is_username(user):
+    # if integer, return False
+    if isinstance(user, int):
+        return False
+    # if string but integer, return False
+    elif user.isdigit():
+        return False
+    else:
+        return True
+
+
 # Function to convert jazz_standard to dictionary
 # it will be unpacked to a kwarg in crud functions
 def jazz_standardstr(jazz_standard):
@@ -26,3 +38,4 @@ def jazz_standardstr(jazz_standard):
         return {"jazz_standard_id": int(jazz_standard)}
     else:
         return {"title": unquote(jazz_standard)}
+
