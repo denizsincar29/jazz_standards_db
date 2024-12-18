@@ -45,3 +45,8 @@ class UserJazzStandardCreate(BaseModel):
     user_id: int
     jazz_standard_id: int
     model_config = ConfigDict(from_attributes=True)
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+    model_config = ConfigDict(from_attributes=True)

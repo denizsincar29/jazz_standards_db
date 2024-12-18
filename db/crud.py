@@ -1,7 +1,6 @@
-from datetime import datetime
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import logging
@@ -47,7 +46,23 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 def get_user_by_token(db: Session, token: str):
     query = select(models.User).join(models.UserPrivate).where(models.UserPrivate.token == token)
-    return db.execute(query).scalars().first()
+    result = db.execute(query).scalars().first()
+
+def update_user_token(db: Session, user_id: int = None, username: str = None, token: str = None):
+    if user_id is None and username is None:
+        raise ValueError("Either 'user_id' or 'username' must be provided.")
+    if not token:
+        raise ValueError("Token is required.")
+    if user_id:
+        query = select(models.UserPrivate).where(models.UserPrivate.user_id == user_id)
+    elif username:
+        query = select(models.UserPrivate).join(models.User).where(models.User.username == username)
+    db_user_private = db.execute(query).scalars().first()
+    if db_user_private:
+        db_user_private.token = token
+        
+        db.commit()
+        return True
 
 def get_salt(db: Session, username: str = None, user_id: int = None):
     if username is None and user_id is None:

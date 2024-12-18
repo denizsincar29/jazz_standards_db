@@ -29,6 +29,7 @@ class UserPrivate(Base):
     salt: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     token: Mapped[str | None] = mapped_column(String, nullable=True)  # for cookie-based auth
 
+
     user: Mapped["User"] = relationship(back_populates="private")
 
 class JazzStyle(enum.Enum):

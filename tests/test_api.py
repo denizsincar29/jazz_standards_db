@@ -9,17 +9,29 @@ from app import app  # noqa
 
 client = TestClient(app)
 
+COOKIE_TOKEN = ""
+
 # Create the first user for authentication
 def create_or_get_auth_user(is_admin=True):
     auth_username = "auth_admin" if is_admin else "auth_user"
     response = client.get(f"/api/users/auth_{'admin' if is_admin else 'user'}")
     if response.status_code == 200:
-        return response.json()
+        print("got the user", response.cookies)
+        return response.json(), response.cookies
     # else create the user
     response = client.post(
         "/api/users/",
         json={"username": auth_username, "name": "Auth User", "password": "qwerty", "is_admin": is_admin},
     )
+    assert response.status_code == 200
+    # login
+    response = client.post(
+        "/api/login",
+        json={"username": auth_username, "password": "qwerty"},
+    )
+    print("logged in", response.text)
+    assert response.status_code == 200
+    print("created the user", dict(response.cookies))
     return (response.json(), response.cookies)
 
 def get_auth_headers(is_admin=True):
