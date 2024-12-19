@@ -1,17 +1,25 @@
-from typing import List
+from typing import List, Annotated
 from fastapi import FastAPI, HTTPException, Depends, Form, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 import logging
-from sqlalchemy.orm import Session
-from db import get_db, crud, models, init_db
 import utils
-import schemas
 import base64
 import bcrypt  # for hashing passwords
-from typing import Annotated
 from secrets import token_urlsafe
+import os
+import dotenv
+dotenv.load_dotenv()
+from sqlalchemy.orm import Session #noqa  # import not on top because of the above
+import schemas
+from db import get_db, crud, models, init_db # noqa
+
+jdb = os.getenv("JAZZ_DB_FILE") 
+if jdb is not None and "test" in jdb:  # smart check if the test db is used
+    logging.info("Using test database")
+
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,19 +39,20 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
         if auth.startswith("Basic "):
             auth = auth[6:]
             username, password = base64.b64decode(auth).decode().split(":")
-            user = crud.get_user_by_username(db, username)
+            user = crud.get_user(db, username = username)
             if user is None:
                 raise HTTPException(status_code=404, detail="User not found")
             # lets get salt and hash the password
             salt = crud.get_salt(db, username)
             password_hash = bcrypt.hashpw(password.encode(), salt)
-            if not crud.check_password(username, password_hash):
+            if not crud.check_password(db, username, password_hash):
                 raise HTTPException(status_code=401, detail="Incorrect password")
             if must_be_admin and not user.is_admin:
                 raise HTTPException(status_code=401, detail="Unauthorized")
             return user
         if auth.startswith("Bearer "):
             token = auth[7:]
+            
             user = crud.get_user_by_token(db, token)
             if user is None:
                 raise HTTPException(status_code=404, detail="User not found")
@@ -63,7 +72,7 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
 
 @app.get("/api/", response_model=schemas.Root)
 def api_root(request: Request, db: Session = Depends(get_db)):
-    logging.info("api_root")  # debug
+    logging.info("api_root started")  # debug
     # check if the user is authorized
     user = check_auth(db, request)
     
@@ -99,8 +108,6 @@ def read_user_me(request: Request, db: Session = Depends(get_db)):
 # login from the api, not the web
 @app.post("/api/login", response_model=schemas.User)
 def login_user(request: Request, response: Response, user: schemas.UserLogin, db: Session = Depends(get_db)):
-    # lets raise i'm a teapot to debug if the request even gets here
-    #raise HTTPException(status_code=418, detail="I'm a teapot")  # it doesn't even get here
     c_user = crud.get_user(db, username = user.username)
     if c_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -122,6 +129,14 @@ def read_user(request: Request, user: str, db: Session = Depends(get_db)):
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
+
+# getme
+@app.get("/api/users/me", response_model=schemas.User)
+def read_user_me(request: Request, response: Response, db: Session = Depends(get_db)):
+    user: models.User = check_auth(db, request)
+    response.set_cookie("username", user.username)
+    response.set_cookie("cookie_token", user.private.token)  # todo!
+    return user
 
 @app.get("/api/users/", response_model=List[schemas.User])
 def read_users(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -237,7 +252,7 @@ def read_root(request: Request):
 @app.post("/login/", response_class=HTMLResponse)
 def login(username: Annotated[str, Form], password: Annotated[str, Form]):
     # check if there is a user with the given username
-    user = crud.get_user_by_username(username)
+    user = crud.get_user(username = username)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     # get the salt of the user

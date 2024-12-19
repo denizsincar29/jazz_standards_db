@@ -1,3 +1,4 @@
+import base64
 import os
 try:
     os.remove("test.db")  # remove the test db file if it exists
@@ -9,12 +10,12 @@ from app import app  # noqa
 
 client = TestClient(app)
 
-COOKIE_TOKEN = ""
+BASIC_AUTH = base64.b64encode(b"auth_admin:qwerty").decode("utf-8")
 
 # Create the first user for authentication
 def create_or_get_auth_user(is_admin=True):
     auth_username = "auth_admin" if is_admin else "auth_user"
-    response = client.get(f"/api/users/auth_{'admin' if is_admin else 'user'}")
+    response = client.get(f"/api/users/me", headers={"Authorization": f"Basic {BASIC_AUTH}"})
     if response.status_code == 200:
         print("got the user", response.cookies)
         return response.json(), response.cookies
