@@ -6,6 +6,7 @@
     <title>Список джазовых стандартов - (введите имя пользователя)</title>
 </head>
 <body>
+    <h1>Вход в систему</h1>
     <form id="usernameForm" action="/login" method="post"></form>
         <label for="username">Введите имя пользователя</label>
         <input type="text" id="username" name="username" required>
@@ -14,5 +15,15 @@
         <button type="submit">Перейти</button>
     </form>
 
+    <h2>ещё не зарегистрированы?</h2>
+    <form id="registerForm" action="/register" method="post">
+        <label for="name">Введите ваше имя</label>
+        <input type="text" id="name" name="name" required>
+        <label for="username">Введите имя пользователя</label>
+        <input type="text" id="username" name="username" required>
+        <label for="password">Введите пароль</label>
+        <input type="password" id="password" name="password" required>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
 </body>
 </html>

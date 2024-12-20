@@ -4,9 +4,16 @@
     <meta charset="UTF-8">
     <title>Список джазовых стандартов</title>
     <script>
-        const username = '{{ username }}';
+        // username is in cookies
+        const username = document.cookie.split('; ').find(row => row.startsWith('username=')).split('=')[1];
+        const cookie_token = document.cookie.split('; ').find(row => row.startsWith('cookie_token=')).split('=')[1];
         async function fetchJazzStandards() {
-            const response = await fetch(`/api/users/${username}/jazz_standards/`);
+            // bearer {{ cookie_token }}
+            const response = await fetch(`/api/users/${username}/jazz_standards/`, he, {
+                headers: {
+                    "Authorization": `Bearer ${cookie_token}`
+                }
+            });
             const standards = await response.json();
             const list = document.getElementById('jazz-standards-list');
             list.innerHTML = '';
@@ -28,5 +35,18 @@
     <ul id="jazz-standards-list">
         <!-- Джазовые стандарты будут загружены сюда -->
     </ul>
+    <h2>Добавить новый стандарт:</h2>
+    <form id="addStandardForm" action="/add_standard/" method="post">
+        <label for="title">Название</label>
+        <input type="text" id="title" name="title" required>
+        <label for="composer">Композитор</label>
+        <input type="text" id="composer" name="composer" required>
+        <label for="style">Стиль</label>
+        <select id="style" name="style">
+            {% for style in styles %}
+            <option value="{{ style }}">{{ style }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Добавить</button>
 </body>
 </html>

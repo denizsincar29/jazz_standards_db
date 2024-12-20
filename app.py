@@ -13,7 +13,7 @@ import dotenv
 dotenv.load_dotenv()
 from sqlalchemy.orm import Session #noqa  # import not on top because of the above
 import schemas
-from db import get_db, crud, models, init_db, teardown_db # noqa
+from db import get_db, crud, models, init_db, teardown_db, JazzStyle # noqa
 
 jdb = os.getenv("JAZZ_DB_FILE") 
 if jdb is not None and "test" in jdb:  # smart check if the test db is used
@@ -254,32 +254,68 @@ def teardown(db: Session = Depends(get_db)):
 
 
 # web routes
+
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
-    # if there is no username cookie, redirect to templates/login.html
+    # if there is no username cookie, redirect to html/login.html
     if "username" not in request.cookies:
-        return templates.TemplateResponse("login.html", {"request": request})
-    # if there is a username cookie, redirect to templates/index.html with template variable username
-    username = request.cookies["username"]
-    return templates.TemplateResponse(request, "index.html", {"username": username})
+        with open("html/login.html") as f:
+            return HTMLResponse(content=f.read())
+    # if there is a username cookie, redirect to html/index.html
+    # get list of jazz_style names
+    styles = [style.value for style in JazzStyle]
+    return templates.TemplateResponse(request, "index.html", {"styles": styles})
 
 @app.post("/login/", response_class=HTMLResponse)
-def login(username: Annotated[str, Form], password: Annotated[str, Form]):
+def login(username: Annotated[str, Form], password: Annotated[str, Form], db: Session = Depends(get_db)):
     # check if there is a user with the given username
-    user = crud.get_user(username = username)
+    user = crud.get_user(db, username = username)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     # get the salt of the user
-    salt = crud.get_salt(username)
+    salt = crud.get_salt(db, username)
     # hash the password with the salt
     password_hash = bcrypt.hashpw(password.encode(), salt)
     # check if the password is correct
-    if not crud.check_password(username, password_hash):
+    if not crud.check_password(db, username, password_hash):
         raise HTTPException(status_code=401, detail="Incorrect password")
     # create a token for the user
     token = token_urlsafe(32)
     response = RedirectResponse(url="/")
     response.set_cookie("username", username)
     response.set_cookie("cookie_token", token)
-    crud.set_token(username, token)
+    crud.set_token(db, username, token)
     return response
+
+# logout
+@app.get("/logout/", response_class=HTMLResponse)
+def logout(response: Response):
+    response.delete_cookie("username")
+    response.delete_cookie("cookie_token")
+    return RedirectResponse(url="/")
+
+# register
+@app.post("/register/", response_class=HTMLResponse)
+def register(username: Annotated[str, Form], name: Annotated[str, Form], password: Annotated[str, Form], db: Session = Depends(get_db)):
+    # check if the username is already taken
+    if crud.get_user(db, username = username) is not None:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    # create a salt
+    salt = bcrypt.gensalt()
+    # hash the password
+    password_hash = bcrypt.hashpw(password.encode(), salt)
+    # create the user
+    crud.create_user(db, username=username, name=name, is_admin=False, password_hash=password_hash, salt=salt)  # admins can be created only from the direct db access, you fool
+    return RedirectResponse(url="/")
+
+# add jazz standard
+@app.post("/add_standard/", response_class=HTMLResponse)
+def add_standard(title: Annotated[str, Form], composer: Annotated[str, Form], style: Annotated[str, Form], request: Request, db: Session = Depends(get_db)):
+    # check if the user is authorized
+    user = check_auth(db, request)
+    # add a jazz standard if it doesn't exist
+    if crud.get_jazz_standard(db, title) is None:
+        crud.add_jazz_standard(db, title, composer, style)
+    # assign the jazz standard to the user
+    crud.add_standard_to_user(db, user.id, title)
+    return RedirectResponse(url="/")
