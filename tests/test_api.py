@@ -55,7 +55,7 @@ def assert_jsons(j1, j2):
     assert j1 == j2  # we do this to view beautiful diff of pytest
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def headers():
     print("Setting up the test db")
     # Create the first user for authentication

@@ -2,7 +2,14 @@
 
 import click  # argparse is bad!
 from db import crud, Session, init_db
-import os
+import bcrypt
+
+# in cli, we dont have much users, so we can use a default password
+# don't do this at home, kids
+DEFAULT_PASSWORD = b'password'
+SALT = bcrypt.gensalt()
+HASHED_PASSWORD = bcrypt.hashpw(DEFAULT_PASSWORD, SALT)
+
 
 @click.group()
 def cli():
@@ -13,7 +20,7 @@ def cli():
 @click.argument('name')
 def add_user(username, name):
     db = Session()
-    user = crud.create_user(db, username, name)
+    user = crud.create_user(db, name, username, HASHED_PASSWORD)
     print(user)
     db.close()
 

@@ -1,7 +1,6 @@
 import pytest
 import os
 import bcrypt
-
 from sqlalchemy import Delete, select
 
 try:
@@ -10,6 +9,7 @@ except FileNotFoundError:
     pass
 os.environ["JAZZ_DB_FILE"] = "test2.db"  # because :memory: is doing some weird stuff
 from db import models, crud, Session, engine, init_db, JazzStyle  # noqa  # linter doesn't like imports after setting env vars
+
 
 password = b"password"
 salt = bcrypt.gensalt()
@@ -22,6 +22,17 @@ def db():
     init_db()
     yield db
     db.close()
+
+@pytest.fixture(scope="module")  # this will replace test_delete_everything
+def setup():
+    init_db()
+    yield  
+    engine.dispose()
+    try:
+        os.remove("test2.db")
+    except FileNotFoundError:
+        print("Warning: test db file not found but you can delete it manually")
+
 
 # tests are run one by one, and all entries stay in the db, so everytime we make a user with the same username, it will fail
 class TestCRUD:
@@ -140,12 +151,4 @@ class TestCRUD:
         db.commit()
         assert len(crud.get_users(db)) == 0
         assert len(crud.get_jazz_standards(db)) == 0
-        #assert len(crud.get_user_standards(db, user_id=1)) == 0  # this will raise an error because the user doesn't exist
-        # this is teardown because tests run 1 by 1, lets close db and delete the test db file
-        db.close()
-        engine.dispose()
-        try:
-            os.remove("test2.db")
-        except FileNotFoundError:
-            print("Warning: test db file not found but you can delete it manually")
-        # good bye everyone, it was fun testing you
+        # good bye all, it was nice testing you

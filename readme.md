@@ -45,7 +45,7 @@ The CLI provides commands for managing users and jazz standards. Here are some e
     python -m cli add-standard-to-user <username> <jazz_standard_name>
     ```
 
-### API
+### API (changed, readme is quite old)
 
 The API provides endpoints for managing users and jazz standards. Here are some examples:
 
@@ -72,8 +72,10 @@ The API provides endpoints for managing users and jazz standards. Here are some 
 ## Testing
 
 **Note**: For some reason, the tests don't run well both at the same time. So, you should run them separately. This is because of each environment variables in both test files that are different from each other and don't work well together.
+UPD. It seems like the problem is solved using fixtures in the tests. Now, you can run them with `pytest` command.
 Run the tests using pytest:
 ```sh
+pytest
 pytest tests/test_crud.py
 pytest tests/test_api.py
 ```
