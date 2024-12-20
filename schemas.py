@@ -35,6 +35,12 @@ class UserCreate(BaseModel):
     is_admin: bool
     model_config = ConfigDict(from_attributes=True)
 
+class AdminCreate(BaseModel):
+    username: str
+    name: str
+    password: str
+    model_config = ConfigDict(from_attributes=True)
+
 class JazzStandardCreate(BaseModel):
     title: str
     composer: str

@@ -91,10 +91,28 @@ def api_root(request: Request, db: Session = Depends(get_db)):
 
 @app.post("/api/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # this can be done by whoever
+    # this can be done by whoever, but only admins can create admins
+    if user.is_admin:
+        check_auth(db, request, must_be_admin=True)
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(user.password.encode(), salt)
     r = crud.create_user(db, username=user.username, name=user.name, is_admin=user.is_admin, password_hash=password_hash, salt=salt)
+    if r is None:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    return r
+
+# create an admin user
+# if there are no users, this will create the first user as an admin
+# if there are already users, this will fail
+# thus after deployment, you should run this endpoint to create the first admin user if you don't want other random people to create an owner and take over the system haha!
+@app.post("/api/admin/", response_model=schemas.User)
+def create_admin(user: schemas.AdminCreate, db: Session = Depends(get_db)):
+    # check if there are any users
+    if crud.get_users(db):
+        raise HTTPException(status_code=400, detail="Admin already exists")
+    salt = bcrypt.gensalt()
+    password_hash = bcrypt.hashpw(user.password.encode(), salt)
+    r = crud.create_user(db, username=user.username, name=user.name, is_admin=True, password_hash=password_hash, salt=salt)
     if r is None:
         raise HTTPException(status_code=400, detail="Username already exists")
     return r
