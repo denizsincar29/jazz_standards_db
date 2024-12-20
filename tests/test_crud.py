@@ -9,7 +9,7 @@ try:
 except FileNotFoundError:
     pass
 os.environ["JAZZ_DB_FILE"] = "test2.db"  # because :memory: is doing some weird stuff
-from db import models, crud, SessionLocal, engine, init_db, JazzStyle  # noqa  # linter doesn't like imports after setting env vars
+from db import models, crud, Session, engine, init_db, JazzStyle  # noqa  # linter doesn't like imports after setting env vars
 
 password = b"password"
 salt = bcrypt.gensalt()
@@ -18,7 +18,7 @@ hashed_password = bcrypt.hashpw(password, salt)
 # This thing is used for getting sessions.
 @pytest.fixture()
 def db():
-    db = SessionLocal()
+    db = Session()
     init_db()
     yield db
     db.close()
@@ -144,5 +144,8 @@ class TestCRUD:
         # this is teardown because tests run 1 by 1, lets close db and delete the test db file
         db.close()
         engine.dispose()
-        os.remove("test2.db")
+        try:
+            os.remove("test2.db")
+        except FileNotFoundError:
+            print("Warning: test db file not found but you can delete it manually")
         # good bye everyone, it was fun testing you

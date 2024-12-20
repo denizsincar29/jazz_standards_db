@@ -1,5 +1,4 @@
 import os
-from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -17,7 +16,7 @@ engine = create_engine(
 )
 
 # Создание фабрики сессий с привязкой к созданному движку
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Базовый класс для объявления моделей
 class Base(DeclarativeBase):
@@ -35,7 +34,7 @@ def teardown_db():
 # generator function to get a database session and close it after use
 #@contextmanager
 def get_db():
-    db = SessionLocal()
+    db = Session()
     try:
         yield db
     finally:
