@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy import func

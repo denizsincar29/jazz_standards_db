@@ -13,7 +13,7 @@ import dotenv
 dotenv.load_dotenv()
 from sqlalchemy.orm import Session #noqa  # import not on top because of the above
 import schemas
-from db import get_db, crud, models, init_db # noqa
+from db import get_db, crud, models, init_db, teardown_db # noqa
 
 jdb = os.getenv("JAZZ_DB_FILE") 
 if jdb is not None and "test" in jdb:  # smart check if the test db is used
@@ -237,6 +237,15 @@ def delete_user_standard(request: Request, user: str, jazz_standard: str, db: Se
         raise HTTPException(status_code=404, detail="User Jazz Standard not found")
     crud.delete_user_standard(db, **utils.userstr(user), **utils.jazz_standardstr(jazz_standard))
     return db_user_standard
+
+# tear down endpoint that works only in test mode
+@app.get("/api/teardown")
+def teardown(db: Session = Depends(get_db)):
+    if jdb is not None and "test" in jdb:
+        teardown_db()
+        return {"message": "Database dropped"}
+    else:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 # web routes

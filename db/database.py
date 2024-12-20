@@ -24,10 +24,15 @@ class Base(DeclarativeBase):
     pass
 
 def init_db():
-    from db import models  # to load the base classes
+    from db import models  # noqa
     Base.metadata.create_all(bind=engine)
 
-# Функция-генератор для получения сессии, автоматически закрывает сессию после использования
+# This function is only used in tests! It drops all tables in the database and closes the connection
+def teardown_db():
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+# generator function to get a database session and close it after use
 #@contextmanager
 def get_db():
     db = SessionLocal()
