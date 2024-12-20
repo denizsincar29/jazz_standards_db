@@ -164,6 +164,7 @@ def create_jazz_standard(request: Request, jazz_standard: schemas.JazzStandardCr
     r=crud.add_jazz_standard(db, title=jazz_standard.title, composer=jazz_standard.composer, style=jazz_standard.style)
     if r is None:
         raise HTTPException(status_code=400, detail="Jazz Standard already exists")
+    return r
 
 @app.get("/api/jazz_standards/{jazz_standard}", response_model=schemas.JazzStandard)
 def read_jazz_standard(request: Request, jazz_standard: str, db: Session = Depends(get_db)):
@@ -204,9 +205,13 @@ def add_standard_to_user(request: Request, user: str, jazz_standard: str, db: Se
         else:
             if current_user.id != user:
                 raise HTTPException(status_code=401, detail="Unauthorized")
-    r = crud.add_standard_to_user(db, **utils.userstr(user), **utils.jazz_standardstr(jazz_standard))
+    try:
+        r = crud.add_standard_to_user(db, **utils.userstr(user), **utils.jazz_standardstr(jazz_standard))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="User or Jazz Standard not found")
     if r is None:
         raise HTTPException(status_code=400, detail="User Jazz Standard already exists")
+    return r
 
 @app.get("/api/users/{user}/jazz_standards/", response_model=List[schemas.UserJazzStandard])
 def get_user_standards(request: Request, user: str, db: Session = Depends(get_db)):

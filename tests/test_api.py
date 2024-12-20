@@ -6,6 +6,7 @@ try:
 except FileNotFoundError:
     pass
 os.environ["JAZZ_DB_FILE"] = "test.db"  # because :memory: is doing some weird stuff
+from db.models import JazzStyle
 from fastapi.testclient import TestClient  # noqa
 from app import app  # noqa
 
@@ -140,3 +141,104 @@ def test_delete_user(headers):
     response = client.delete(f"/api/users/{user_id}", headers=headers[0])
     assert response.status_code == 404, f"User should have been died already! Expected 404, got {response.status_code}"
 
+def test_login_api(headers):
+    response = client.post(
+        "/api/login",
+        json={"username": "test_user", "password": "securepass"},
+    )
+    assert response.status_code == 200
+    assert "cookie_token" in response.cookies
+    assert "username" in response.cookies
+
+def test_read_user_me(headers):
+    response = client.get("/api/users/me", headers=headers[0])
+    assert response.status_code == 200
+    assert response.json()["username"] == "auth_admin"
+
+def test_create_jazz_standard(headers):
+    response = client.post(
+        "/api/jazz_standards/",
+        json={"title": "Giant Steps", "composer": "John Coltrane", "style": JazzStyle.bebop.value},
+        headers=headers[0]
+    )
+    assert response.status_code == 200
+    assert response.json()["title"] == "Giant Steps"
+
+def test_read_jazz_standard(headers):
+    response = client.post(
+        "/api/jazz_standards/",
+        json={"title": "Blue Bossa", "composer": "Kenny Dorham", "style": JazzStyle.bossa_nova.value},
+        headers=headers[0]
+    )
+    j = response.json()
+    print(j)
+    standard_id = j["id"]
+    response = client.get(f"/api/jazz_standards/{standard_id}", headers=headers[0])
+    assert response.status_code == 200
+    assert response.json()["title"] == "Blue Bossa"
+
+def test_read_jazz_standards(headers):
+    response = client.get("/api/jazz_standards/", headers=headers[0])
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+    response = client.get("/api/jazz_standards/", headers=headers[1])
+    assert response.status_code == 401  # non-admin user
+
+def test_delete_jazz_standard(headers):
+    response = client.post(
+        "/api/jazz_standards/",
+        json={"title": "Autumn Leaves", "composer": "Joseph Kosma", "style": JazzStyle.swing.value},
+        headers=headers[0]
+    )
+    standard_id = response.json()["id"]
+    response = client.delete(f"/api/jazz_standards/{standard_id}", headers=headers[0])
+    assert response.status_code == 200
+    response = client.get(f"/api/jazz_standards/{standard_id}", headers=headers[0])
+    assert response.status_code == 404
+
+def test_add_standard_to_user(headers):
+    # Create standard
+    response = client.post(
+        "/api/jazz_standards/",
+        json={"title": "So What", "composer": "Miles Davis", "style": JazzStyle.modal.value},
+        headers=headers[0]
+    )
+    assert response.status_code == 200, response.text
+    standard_id = response.json()["id"]
+    
+    # Add standard to user
+    response = client.post(
+        f"/api/users/auth_admin/jazz_standards/{standard_id}",
+        headers=headers[0]
+    )
+    assert response.status_code == 200
+
+def test_get_user_standards(headers):
+    response = client.get("/api/users/auth_admin/jazz_standards/", headers=headers[0])
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+def test_delete_user_standard(headers):
+    # Create and add standard
+    response = client.post(
+        "/api/jazz_standards/",
+        json={"title": "Take Five", "composer": "Paul Desmond", "style": JazzStyle.swing.value},
+        headers=headers[0]
+    )
+    standard_id = response.json()["id"]
+    client.post(
+        f"/api/users/auth_admin/jazz_standards/{standard_id}",
+        headers=headers[0]
+    )
+    
+    # Delete user standard
+    response = client.delete(
+        f"/api/users/auth_admin/jazz_standards/{standard_id}",
+        headers=headers[0]
+    )
+    assert response.status_code == 200
+
+def test_teardown():
+    response = client.get("/api/teardown")
+    assert response.status_code == 200
+    assert response.json() == {"message": "Database dropped"}
