@@ -14,7 +14,7 @@ class User(Base):
 
     # user private data is deleted when user is deleted
     private: Mapped["UserPrivate"] = relationship(back_populates="user", cascade="all, delete-orphan")
-    jazz_standards: Mapped[list["UserJazzStandard"]] = relationship(back_populates="user")
+    jazz_standards: Mapped[list["UserJazzStandard"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         if self.is_admin:
@@ -24,7 +24,7 @@ class User(Base):
 # User's private data, connected to User with ID, so it's deleted when user is deleted
 class UserPrivate(Base):
     __tablename__ = "users_private"
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     password_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     salt: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     token: Mapped[str | None] = mapped_column(String, nullable=True)  # for cookie-based auth
@@ -53,7 +53,7 @@ class JazzStandard(Base):
     composer: Mapped[str] = mapped_column(String, nullable=False)
     style: Mapped[JazzStyle] = mapped_column(Enum(JazzStyle), nullable=False)
 
-    users: Mapped[list["UserJazzStandard"]] = relationship(back_populates="jazz_standard")
+    users: Mapped[list["UserJazzStandard"]] = relationship(back_populates="jazz_standard", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"{self.title} by {self.composer}"
@@ -63,8 +63,8 @@ class JazzStandard(Base):
 class UserJazzStandard(Base):
     __tablename__ = "user_jazz_standards"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    jazz_standard_id: Mapped[int] = mapped_column(ForeignKey("jazz_standards.id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    jazz_standard_id: Mapped[int] = mapped_column(ForeignKey("jazz_standards.id", ondelete="CASCADE"), primary_key=True)
 
     user: Mapped["User"] = relationship(back_populates="jazz_standards")
     jazz_standard: Mapped["JazzStandard"] = relationship(back_populates="users")

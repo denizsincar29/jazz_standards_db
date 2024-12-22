@@ -130,6 +130,26 @@ class TestCRUD:
         assert crud.delete_user_standard(db, user_id=user.id, jazz_standard_id=standard.id)
         user_standards = crud.get_user_standards(db, user_id=user.id)
         assert len(user_standards) == 0
+        # lets check the relationship's both side disconnection behaviors
+        # now lets again create relationship between these 2 and delete the user. Check if the relationship is deleted
+        crud.add_standard_to_user(db, user_id=user.id, jazz_standard_id=standard.id)
+        crud.delete_user(db, user_id=user.id)  # here ya go!
+        user_standards = crud.get_user_standards(db, user_id=user.id)
+        assert len(user_standards) == 0
+        # lets check if the standard is still in the db
+        retrieved_standard = crud.get_jazz_standard(db, jazz_standard_id=standard.id)
+        assert retrieved_standard is not None
+        # now lets create the user, relationship and delete the standard.
+        user = crud.create_user(db, name="Test User", username="testuser_g", password_hash=hashed_password, salt=salt)
+        crud.add_standard_to_user(db, user_id=user.id, jazz_standard_id=standard.id)
+        crud.delete_jazz_standard(db, jazz_standard_id=standard.id)
+        user_standards = crud.get_user_standards(db, user_id=user.id)
+        assert len(user_standards) == 0
+        # lets check if the user is still in the db
+        retrieved_user = crud.get_user(db, user_id=user.id)
+        assert retrieved_user is not None
+        # Because i very much doubt that i did everything correctly, so yeah, lets run it!
+        # Yeah! 15 tests passed! I'm a genius!
 
     def test_get_user_standards_count(self, db):
         user = crud.create_user(db, name="Test User", username="testuser_h", password_hash=hashed_password, salt=salt)
