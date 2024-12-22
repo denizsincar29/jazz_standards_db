@@ -12,12 +12,12 @@ import os
 import dotenv
 dotenv.load_dotenv()
 from sqlalchemy.orm import Session #noqa  # import not on top because of the above
-import schemas
+import schemas # noqa
 from db import get_db, crud, models, init_db, teardown_db, JazzStyle # noqa
 
-jdb = os.getenv("JAZZ_DB_FILE") 
-if jdb is not None and "test" in jdb:  # smart check if the test db is used
-    logging.info("Using test database")
+testenv = os.getenv("TEST_ENV")
+if testenv is not None:
+    logging.info(f"Using test database #{testenv}")
 
 
 
@@ -90,7 +90,7 @@ def api_root(request: Request, db: Session = Depends(get_db)):
         return response
 
 @app.post("/api/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     # this can be done by whoever, but only admins can create admins
     if user.is_admin:
         check_auth(db, request, must_be_admin=True)
@@ -118,7 +118,7 @@ def create_admin(user: schemas.AdminCreate, db: Session = Depends(get_db)):
     return r
 
 @app.get("/api/users/me", response_model=schemas.User)
-def read_user_me(request: Request, db: Session = Depends(get_db)):
+def read_user_me_api(request: Request, db: Session = Depends(get_db)):
     # check if the user is authorized
     user = check_auth(db, request)
     return user
@@ -264,7 +264,7 @@ def delete_user_standard(request: Request, user: str, jazz_standard: str, db: Se
 # tear down endpoint that works only in test mode
 @app.get("/api/teardown")
 def teardown(db: Session = Depends(get_db)):
-    if jdb is not None and "test" in jdb:
+    if testenv is not None:
         teardown_db()
         return {"message": "Database dropped"}
     else:

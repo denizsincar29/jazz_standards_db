@@ -12,6 +12,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # user private data is deleted when user is deleted
     private: Mapped["UserPrivate"] = relationship(back_populates="user", cascade="all, delete-orphan")
     jazz_standards: Mapped[list["UserJazzStandard"]] = relationship(back_populates="user")
 
@@ -20,16 +21,13 @@ class User(Base):
             return f"{self.name} #{self.username}"  # when sudo su, prompt changes to #, so this is a joke
         return f"{self.name} @{self.username}"
 
-# User's private data
+# User's private data, connected to User with ID, so it's deleted when user is deleted
 class UserPrivate(Base):
     __tablename__ = "users_private"
-
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     password_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     salt: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     token: Mapped[str | None] = mapped_column(String, nullable=True)  # for cookie-based auth
-
-
     user: Mapped["User"] = relationship(back_populates="private")
 
 class JazzStyle(enum.Enum):
@@ -60,6 +58,8 @@ class JazzStandard(Base):
     def __repr__(self):
         return f"{self.title} by {self.composer}"
 
+# many-to-many relationship between User and JazzStandard
+# User can play many JazzStandards, JazzStandard can be played by many Users
 class UserJazzStandard(Base):
     __tablename__ = "user_jazz_standards"
 

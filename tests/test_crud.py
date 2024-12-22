@@ -1,14 +1,11 @@
 import pytest
 import os
 import bcrypt
-from sqlalchemy import Delete, select
-
-try:
-    os.remove("test2.db")  # remove the test db file if it exists
-except FileNotFoundError:
-    pass
-os.environ["JAZZ_DB_FILE"] = "test2.db"  # because :memory: is doing some weird stuff
+from sqlalchemy import select, delete
+os.environ["TEST_ENV"] ="1"
 from db import models, crud, Session, engine, init_db, JazzStyle  # noqa  # linter doesn't like imports after setting env vars
+import logging
+logging.basicConfig(level=logging.DEBUG)  # so we can see the queries
 
 
 password = b"password"
@@ -18,20 +15,19 @@ hashed_password = bcrypt.hashpw(password, salt)
 # This thing is used for getting sessions.
 @pytest.fixture()
 def db():
+    logging.debug("Creating a new session")
     db = Session()
-    init_db()
     yield db
     db.close()
+    logging.debug("Closing the session")
 
-@pytest.fixture(scope="module")  # this will replace test_delete_everything
+@pytest.fixture(scope="module", autouse=True)  # autouse means it will be used by all tests
 def setup():
+    logging.debug("Setting up the database")
     init_db()
-    yield  
+    yield  # this is where the tests will run
     engine.dispose()
-    try:
-        os.remove("test2.db")
-    except FileNotFoundError:
-        print("Warning: test db file not found but you can delete it manually")
+    logging.debug("Disposing the engine")
 
 
 # tests are run one by one, and all entries stay in the db, so everytime we make a user with the same username, it will fail
@@ -145,10 +141,15 @@ class TestCRUD:
 
     def tests_delete_everything(self, db):
         # crud doesn't have a delete_everything function, so we'll just delete everything manually
-        db.execute(Delete(models.User))
-        db.execute(Delete(models.JazzStandard))
-        db.execute(Delete(models.UserJazzStandard))
+        db.execute(delete(models.User))
+        db.execute(delete(models.JazzStandard))
+        #db.execute(delete(models.UserPrivate))  # we don't need to delete private data because it will be deleted with the user
+        #db.execute(delete(models.UserJazzStandard))  # we don't need to delete user standards because they will be deleted with the user
         db.commit()
+        # lets check if everything is deleted
         assert len(crud.get_users(db)) == 0
         assert len(crud.get_jazz_standards(db)) == 0
+        # lets check if private data and user standards are deleted
+        assert db.execute(select(models.UserPrivate)).scalar_one_or_none() is None
+        assert db.execute(select(models.UserJazzStandard)).scalar_one_or_none() is None
         # good bye all, it was nice testing you

@@ -1,0 +1,7 @@
+sqlalchemy
+fastapi
+uvicorn
+psycopg  # not 2, but 3
+python-dotenv
+# anything else i forgot?
+# and of course, install postgresql

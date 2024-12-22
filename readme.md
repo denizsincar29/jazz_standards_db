@@ -12,11 +12,23 @@ This project is a Jazz Standards Database application that allows users to manag
 
 ## Installation
 
-Clone the repository:
+- Clone the repository:
     ```sh
     git clone https://github.com/denizsincar29/jazz_standards_db.git
     cd jazz_standards_db
     ```
+- Install the dependencies:
+    ```sh
+    pip install -r requirements.txt
+    ```
+    - PostgreSQL is used as the database. You can install it using the following command on unix:
+    ```sh
+    sudo apt update
+    sudo apt install postgresql
+    ```
+    on windows you can download the installer from [here](https://www.postgresql.org/download/).
+
+I think you can easily switch to sqlite. Just go to db/database.py and change the DATABASE_URL to 'sqlite:///whatever.db' and you are good to go. Don't forget to change all tests' DATABASE_URL to the e.g. test1.db and test2.db for both test files.
 
 
 ## Usage

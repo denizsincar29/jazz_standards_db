@@ -1,12 +1,8 @@
 import pytest
 import base64
 import os
-try:
-    os.remove("test.db")  # remove the test db file if it exists
-except FileNotFoundError:
-    pass
-os.environ["JAZZ_DB_FILE"] = "test.db"  # because :memory: is doing some weird stuff
-from db.models import JazzStyle
+os.environ["TEST_ENV"] = "2"  # use other test database
+from db.models import JazzStyle # noqa
 from fastapi.testclient import TestClient  # noqa
 from app import app  # noqa
 
