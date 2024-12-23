@@ -43,6 +43,9 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     query = select(models.User).offset(skip).limit(limit)
     return db.execute(query).scalars().all()
 
+def get_users_count(db: Session):
+    return db.execute(select(func.count(models.User.id))).scalar()
+
 def get_user_by_token(db: Session, token: str):
     query = select(models.User).join(models.UserPrivate).where(models.UserPrivate.token == token)
     return db.execute(query).scalars().first()
@@ -87,9 +90,11 @@ def delete_user(db: Session, user_id: int = None, username: str = None):
     if user_id is None and username is None:
         raise ValueError("Either 'user_id' or 'username' must be provided.")
     try:
+        # here something is wrong, we should check if user exists before deleting
+        logger.info(f"Deleting user with id {user_id} or username {username}")
         user = get_user(db, user_id=user_id, username=username)
         if not user:
-            logger.info(f"User with id {user_id or username} not found.") #Improved logging message
+            logger.info(f"User with id {user_id} or username {username} not found.") #Improved logging message
             return False
         db.delete(user)
         db.commit()

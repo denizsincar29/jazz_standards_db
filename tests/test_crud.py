@@ -70,6 +70,9 @@ class TestCRUD:
         private_data = db.execute(select(models.UserPrivate).where(models.UserPrivate.user_id == user.id)).scalar_one_or_none()
         assert private_data is None  # it should be None because we deleted the user
         # it will not raise an error if the user is not found, it will just delete nothing
+        # create a user and delete by username
+        user = crud.create_user(db, name="Test User", username="testuser_d", password_hash=hashed_password, salt=salt)
+        assert crud.delete_user(db, username="testuser_d")
 
     def test_add_jazz_standard(self, db):
         style = JazzStyle.modal  # so what is modal jazz

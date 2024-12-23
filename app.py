@@ -1,5 +1,5 @@
 from typing import List, Annotated
-from fastapi import FastAPI, HTTPException, Depends, Form, Response
+from fastapi import FastAPI, HTTPException, Depends, Form, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
@@ -69,6 +69,19 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
         return user
     raise HTTPException(status_code=401, detail="Unauthorized")
 
+# web browsers must show beautiful error pages
+# use try checkauth except return error page
+def check_auth_web(db: Session, request: Request, must_be_admin: bool = False) -> models.User:
+    try:
+        return check_auth(db, request, must_be_admin)
+    except HTTPException as e:
+        # return template templates/error.html with code=e.status_code and message=e.detail
+        return templates.TemplateResponse("error.html", {"code": e.status_code, "message": e.detail})
+        # should I instead make a dict "russian"? Later, maybe
+
+# in web routes, use this function instead of raise HTTPException. Just return error_page(404, "User not found") for example
+def error_page(code: int, message: str) -> templates.TemplateResponse:
+    return templates.TemplateResponse("error.html", {"code": code, "message": message})
 
 @app.get("/api/", response_model=schemas.Root)
 def api_root(request: Request, db: Session = Depends(get_db)):
@@ -93,7 +106,10 @@ def api_root(request: Request, db: Session = Depends(get_db)):
 def create_user(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     # this can be done by whoever, but only admins can create admins
     if user.is_admin:
-        check_auth(db, request, must_be_admin=True)
+        users_count = crud.get_users_count(db)
+        # if there are no users, you can create an admin while not being an admin and even not being authorized
+        if users_count > 0:  # if there are users, disallow creating an admin
+            check_auth(db, request, must_be_admin=True)
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(user.password.encode(), salt)
     r = crud.create_user(db, username=user.username, name=user.name, is_admin=user.is_admin, password_hash=password_hash, salt=salt)
@@ -159,22 +175,22 @@ def read_user_me(request: Request, response: Response, db: Session = Depends(get
 @app.get("/api/users/", response_model=List[schemas.User])
 def read_users(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     # only admin can see all users
-    user = check_auth(db, request)
-    if not user.is_admin:
-        raise HTTPException(status_code=401, detail="Unauthorized")  # You're not admin, go away
+    check_auth(db, request, must_be_admin=True)
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
 
-@app.delete("/api/users/{user}", response_model=schemas.User)
+# return "ok" string
+@app.delete("/api/users/{user}", response_model=str)
 def delete_user(request: Request, user: str, db: Session = Depends(get_db)):
     current_user = check_auth(db, request)
-    if not current_user.is_admin:
+    # if it's me, I can delete myself
+    # if it's not me, I can delete anyone if I'm an admin
+    if current_user.id != user and current_user.username != user and not current_user.is_admin:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    db_user = crud.get_user(db, **utils.userstr(user))
-    if db_user is None:
+    deleted = crud.delete_user(db, **utils.userstr(user))
+    if not deleted:  # how natural english this is!!!
         raise HTTPException(status_code=404, detail="User not found")
-    crud.delete_user(db, **utils.userstr(user))
-    return db_user
+    return "ok"
 
 @app.post("/api/jazz_standards/", response_model=schemas.JazzStandard)
 def create_jazz_standard(request: Request, jazz_standard: schemas.JazzStandardCreate, db: Session = Depends(get_db)):
@@ -194,17 +210,13 @@ def read_jazz_standard(request: Request, jazz_standard: str, db: Session = Depen
 
 @app.get("/api/jazz_standards/", response_model=List[schemas.JazzStandard])
 def read_jazz_standards(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    current_user = check_auth(db, request)
-    if not current_user.is_admin:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    check_auth(db, request, must_be_admin=True)
     jazz_standards = crud.get_jazz_standards(db, skip=skip, limit=limit)
     return jazz_standards
 
 @app.delete("/api/jazz_standards/{jazz_standard}", response_model=schemas.JazzStandard)
 def delete_jazz_standard(request: Request, jazz_standard: str, db: Session = Depends(get_db)):
-    current_user = check_auth(db, request)
-    if not current_user.is_admin:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    check_auth(db, request, must_be_admin=True)
     db_jazz_standard = crud.get_jazz_standard(db, **utils.jazz_standardstr(jazz_standard))
     if db_jazz_standard is None:
         raise HTTPException(status_code=404, detail="Jazz Standard not found")
@@ -277,7 +289,7 @@ def teardown(db: Session = Depends(get_db)):
 def read_root(request: Request):
     # if there is no username cookie, redirect to html/login.html
     if "username" not in request.cookies:
-        with open("html/login.html") as f:
+        with open("html/login.html", encoding="UTF-8") as f:
             return HTMLResponse(content=f.read())
     # if there is a username cookie, redirect to html/index.html
     # get list of jazz_style names
@@ -285,24 +297,24 @@ def read_root(request: Request):
     return templates.TemplateResponse(request, "index.html", {"styles": styles})
 
 @app.post("/login/", response_class=HTMLResponse)
-def login(username: Annotated[str, Form], password: Annotated[str, Form], db: Session = Depends(get_db)):
+def login(username: Annotated[str, Form()], password: Annotated[str, Form()], db: Session = Depends(get_db)):
     # check if there is a user with the given username
     user = crud.get_user(db, username = username)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_page(404, "Пользователь не найден")
     # get the salt of the user
     salt = crud.get_salt(db, username)
     # hash the password with the salt
     password_hash = bcrypt.hashpw(password.encode(), salt)
     # check if the password is correct
     if not crud.check_password(db, username, password_hash):
-        raise HTTPException(status_code=401, detail="Incorrect password")
+        return error_page(401, "Неправильный пароль")
     # create a token for the user
     token = token_urlsafe(32)
-    response = RedirectResponse(url="/")
+    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie("username", username)
     response.set_cookie("cookie_token", token)
-    crud.set_token(db, username, token)
+    crud.update_user_token(db, username=username, token=token)  # it needs kwargs, not args
     return response
 
 # logout
@@ -314,26 +326,30 @@ def logout(response: Response):
 
 # register
 @app.post("/register/", response_class=HTMLResponse)
-def register(username: Annotated[str, Form], name: Annotated[str, Form], password: Annotated[str, Form], db: Session = Depends(get_db)):
+def register(name: Annotated[str, Form()], username: Annotated[str, Form()], password: Annotated[str, Form()], db: Session = Depends(get_db)):
+    logging.info(f"registering {username}")
     # check if the username is already taken
     if crud.get_user(db, username = username) is not None:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        return error_page(400, "Пользователь уже существует")
     # create a salt
     salt = bcrypt.gensalt()
     # hash the password
     password_hash = bcrypt.hashpw(password.encode(), salt)
     # create the user
     crud.create_user(db, username=username, name=name, is_admin=False, password_hash=password_hash, salt=salt)  # admins can be created only from the direct db access, you fool
-    return RedirectResponse(url="/")
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 # add jazz standard
 @app.post("/add_standard/", response_class=HTMLResponse)
-def add_standard(title: Annotated[str, Form], composer: Annotated[str, Form], style: Annotated[str, Form], request: Request, db: Session = Depends(get_db)):
+def add_standard(title: Annotated[str, Form()], composer: Annotated[str, Form()], style: Annotated[str, Form()], request: Request, db: Session = Depends(get_db)):
     # check if the user is authorized
     user = check_auth(db, request)
     # add a jazz standard if it doesn't exist
-    if crud.get_jazz_standard(db, title) is None:
+    if crud.get_jazz_standard(db, title=title) is None:
         crud.add_jazz_standard(db, title, composer, style)
     # assign the jazz standard to the user
-    crud.add_standard_to_user(db, user.id, title)
+    try:
+        crud.add_standard_to_user(db, user.id, title)
+    except ValueError:
+        return error_page(404, "Вы уже отметили этот стандарт, как изученный")
     return RedirectResponse(url="/")

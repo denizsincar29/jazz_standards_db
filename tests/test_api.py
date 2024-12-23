@@ -52,7 +52,7 @@ def assert_jsons(j1, j2):
     assert j1 == j2  # we do this to view beautiful diff of pytest
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def headers():
     print("Setting up the test db")
     # Create the first user for authentication
@@ -78,13 +78,23 @@ def test_read_root(headers):
     assert "users" in response.json()
     assert "jazz_standards" in response.json()
 
-def test_create_user():
+def test_create_user(headers):
     response = client.post(
         "/api/users/",
-        json={"username": "test_user", "name": "Test User", "password": "securepass", "is_admin": True},
+        json={"username": "test_user", "name": "Test User", "password": "securepass", "is_admin": False},
+        headers=headers[0]
     )
     assert response.status_code == 200, response.text
-    assert_jsons(response.json(), {"username": "test_user", "name": "Test User", "is_admin": True})  # in test_crud.py i didn't think about ignoring id, so there i matched ids perfectly per each test xD
+    assert_jsons(response.json(), {"username": "test_user", "name": "Test User", "is_admin": False})  # assertion without id
+    # now lets create another admin user but using no headers
+    response = client.post(
+        "/api/users/",
+        json={"username": "test_admin", "name": "Test Admin", "password": "securepass1", "is_admin": True},
+    )
+    assert response.status_code == 401, response.text  # you're not admin! Do you think you can manufacture admins? :D
+    # lets delete the admin user to not mess up with other tests
+    response = client.delete("/api/users/test_admin", headers=headers[0])
+    assert response.status_code == 200, response.text  # great but it's not what we are actually testing here
 
 def test_read_user(headers):
     # create a user

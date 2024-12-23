@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Вход в систему</h1>
-    <form id="usernameForm" action="/login" method="post"></form>
+    <form id="loginForm" action="/login" method="post">
         <label for="username">Введите имя пользователя</label>
         <input type="text" id="username" name="username" required>
         <label for="password">Введите пароль</label>
@@ -19,10 +19,10 @@
     <form id="registerForm" action="/register" method="post">
         <label for="name">Введите ваше имя</label>
         <input type="text" id="name" name="name" required>
-        <label for="username">Введите имя пользователя</label>
-        <input type="text" id="username" name="username" required>
-        <label for="password">Введите пароль</label>
-        <input type="password" id="password" name="password" required>
+        <label for="rusername">Введите имя пользователя</label>
+        <input type="text" id="rusername" name="username" required>
+        <label for="rpassword">Введите пароль</label>
+        <input type="password" id="rpassword" name="password" required>
         <button type="submit">Зарегистрироваться</button>
     </form>
 </body>
