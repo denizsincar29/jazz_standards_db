@@ -71,17 +71,22 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
 
 # web browsers must show beautiful error pages
 # use try checkauth except return error page
-def check_auth_web(db: Session, request: Request, must_be_admin: bool = False) -> models.User:
+def check_auth_web(db: Session, request: Request, must_be_admin: bool = False, go_back: str = None, go_login: bool = False) -> models.User:
     try:
-        return check_auth(db, request, must_be_admin)
+        return check_auth(db, request, must_be_admin), None
     except HTTPException as e:
-        # return template templates/error.html with code=e.status_code and message=e.detail
-        return templates.TemplateResponse("error.html", {"code": e.status_code, "message": e.detail})
+        if go_login:
+            with open("html/login.html", encoding="UTF-8") as f:
+                return None, HTMLResponse(content=f.read())
+        return None, error_page(request, e.status_code, e.detail, go_back)
         # should I instead make a dict "russian"? Later, maybe
 
 # in web routes, use this function instead of raise HTTPException. Just return error_page(404, "User not found") for example
-def error_page(code: int, message: str) -> templates.TemplateResponse:
-    return templates.TemplateResponse("error.html", {"code": code, "message": message})
+def error_page(request: Request, code: int, message: str, goback: str = None):
+    context = {"code": code, "message": message}
+    if goback is not None:
+        context["goback"] = goback
+    return templates.TemplateResponse(request, "error.html", context)
 
 @app.get("/api/", response_model=schemas.Root)
 def api_root(request: Request, db: Session = Depends(get_db)):
@@ -286,29 +291,43 @@ def teardown(db: Session = Depends(get_db)):
 # web routes
 
 @app.get("/", response_class=HTMLResponse)
-def read_root(request: Request):
+def read_root(request: Request, db: Session = Depends(get_db)):
     # if there is no username cookie, redirect to html/login.html
     if "username" not in request.cookies:
         with open("html/login.html", encoding="UTF-8") as f:
             return HTMLResponse(content=f.read())
-    # if there is a username cookie, redirect to html/index.html
+    # if there is a username cookie, redirect to html/index.html but check if the user is authorized
+    user, error = check_auth_web(db, request, go_login=True)
+    if error is not None:
+        return error  # if the user is not authorized, return the login page
     # get list of jazz_style names
     styles = [style.value for style in JazzStyle]
-    return templates.TemplateResponse(request, "index.html", {"styles": styles})
+    # get the user's jazz standards
+    user_standards = crud.get_user_standards(db, user_id=user.id)
+    # sort by style:
+    # yeah but this must be a list of jazz_standard objects, not user_jazz_standard objects
+    standards = [standard.jazz_standard for standard in user_standards]
+    standard_dict = {}
+    for standard in standards:
+        if standard.style.value not in standard_dict:
+            standard_dict[standard.style.value] = []
+        standard_dict[standard.style.value].append(standard)
+    # return the index page
+    return templates.TemplateResponse(request, "index.html", {"styles": styles, "user": user, "standards": standard_dict})
 
 @app.post("/login/", response_class=HTMLResponse)
-def login(username: Annotated[str, Form()], password: Annotated[str, Form()], db: Session = Depends(get_db)):
+def login(username: Annotated[str, Form()], password: Annotated[str, Form()], request: Request, db: Session = Depends(get_db)):
     # check if there is a user with the given username
     user = crud.get_user(db, username = username)
     if user is None:
-        return error_page(404, "Пользователь не найден")
+        return error_page(Request, 404, "Пользователь не найден", goback="/")
     # get the salt of the user
     salt = crud.get_salt(db, username)
     # hash the password with the salt
     password_hash = bcrypt.hashpw(password.encode(), salt)
     # check if the password is correct
     if not crud.check_password(db, username, password_hash):
-        return error_page(401, "Неправильный пароль")
+        return error_page(request, 401, "Неправильный пароль", goback="/")
     # create a token for the user
     token = token_urlsafe(32)
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -326,11 +345,11 @@ def logout(response: Response):
 
 # register
 @app.post("/register/", response_class=HTMLResponse)
-def register(name: Annotated[str, Form()], username: Annotated[str, Form()], password: Annotated[str, Form()], db: Session = Depends(get_db)):
+def register(name: Annotated[str, Form()], username: Annotated[str, Form()], password: Annotated[str, Form()], request: Request, db: Session = Depends(get_db)):
     logging.info(f"registering {username}")
     # check if the username is already taken
     if crud.get_user(db, username = username) is not None:
-        return error_page(400, "Пользователь уже существует")
+        return error_page(request, 400, "Пользователь уже существует", goback="/")
     # create a salt
     salt = bcrypt.gensalt()
     # hash the password
@@ -343,13 +362,16 @@ def register(name: Annotated[str, Form()], username: Annotated[str, Form()], pas
 @app.post("/add_standard/", response_class=HTMLResponse)
 def add_standard(title: Annotated[str, Form()], composer: Annotated[str, Form()], style: Annotated[str, Form()], request: Request, db: Session = Depends(get_db)):
     # check if the user is authorized
-    user = check_auth(db, request)
+    user, error = check_auth_web(db, request)
+    if error is not None:
+        return error
     # add a jazz standard if it doesn't exist
     if crud.get_jazz_standard(db, title=title) is None:
         crud.add_jazz_standard(db, title, composer, style)
     # assign the jazz standard to the user
     try:
-        crud.add_standard_to_user(db, user.id, title)
-    except ValueError:
-        return error_page(404, "Вы уже отметили этот стандарт, как изученный")
-    return RedirectResponse(url="/")
+        crud.add_standard_to_user(db, user.id, title=title)
+    except ValueError as e:
+        logging.exception(e)
+        return error_page(request, 404, "Вы уже отметили этот стандарт, как изученный", goback="/")
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

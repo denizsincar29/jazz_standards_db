@@ -7,4 +7,8 @@
     <body>
         <h1>Ошибка {{ code }}</h1>
         <p>{{ message }}</p>
+        {% if goback %}
+            <p><a href="{{ goback }}">Вернуться назад</a></p>
+        {% endif %}
+    </body>
 </html>

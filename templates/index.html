@@ -3,38 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Список джазовых стандартов</title>
-    <script>
-        // username is in cookies
-        const username = document.cookie.split('; ').find(row => row.startsWith('username=')).split('=')[1];
-        const cookie_token = document.cookie.split('; ').find(row => row.startsWith('cookie_token=')).split('=')[1];
-        async function fetchJazzStandards() {
-            // bearer {{ cookie_token }}
-            const response = await fetch(`/api/users/${username}/jazz_standards/`, he, {
-                headers: {
-                    "Authorization": `Bearer ${cookie_token}`
-                }
-            });
-            const standards = await response.json();
-            const list = document.getElementById('jazz-standards-list');
-            list.innerHTML = '';
-            standards.forEach(standard => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `${standard.title} - ${standard.composer} (${standard.style})`;
-                list.appendChild(listItem);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchJazzStandards();
-        });
-    </script>
 </head>
 <body>
-    <h1>{{ username }}!</h1>
+    <h1>{{ user.name }}!</h1>
     <h2>Ваши джазовые стандарты:</h2>
-    <ul id="jazz-standards-list">
-        <!-- Джазовые стандарты будут загружены сюда -->
+    {# standards is a dict of style: [standards] #}
+    {% for style, standards in standards.items() %}
+    <h3>{{ style }}</h3>
+    <ul>
+        {% for standard in standards %}
+        <li>{{ standard.title }} ({{ standard.composer }})</li>
+        {% endfor %}
     </ul>
+    {% endfor %}
+    <br>
     <h2>Добавить новый стандарт:</h2>
     <form id="addStandardForm" action="/add_standard/" method="post">
         <label for="title">Название</label>

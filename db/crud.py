@@ -105,9 +105,11 @@ def delete_user(db: Session, user_id: int = None, username: str = None):
         return False
 
 
-def add_jazz_standard(db: Session, title: str, composer: str, style: models.JazzStyle):
+def add_jazz_standard(db: Session, title: str, composer: str, style: models.JazzStyle | str):
     if not title or not composer or not style:
         raise ValueError("Title, composer, and style are all required to add a jazz standard.")
+    if isinstance(style, str):
+        style = models.JazzStyle.str_to_enum(style)
     db_jazz_standard = models.JazzStandard(title=title, composer=composer, style=style)
     try:
         db.add(db_jazz_standard)
@@ -144,9 +146,11 @@ def get_standards_by_composer(db: Session, composer: str):
     return db.execute(query).scalars().all()
 
 
-def get_standards_by_style(db: Session, style: models.JazzStyle):
+def get_standards_by_style(db: Session, style: models.JazzStyle | str):
     if not style:
         raise ValueError("Style cannot be None.") #added validation
+    if isinstance(style, str):
+        style = models.JazzStyle.str_to_enum(style)
     query = select(models.JazzStandard).where(models.JazzStandard.style == style)
     return db.execute(query).scalars().all()
 

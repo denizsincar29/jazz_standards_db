@@ -45,6 +45,10 @@ class JazzStyle(enum.Enum):
     free = "free"
     fusion = "fusion"
 
+    def str_to_enum(style: str):
+        return JazzStyle[style.replace(" ", "_")]
+
+
 class JazzStandard(Base):
     __tablename__ = "jazz_standards"
 
