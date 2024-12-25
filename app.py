@@ -48,16 +48,15 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
             if not crud.check_password(db, username, password_hash):
                 raise HTTPException(status_code=401, detail="Incorrect password")
             if must_be_admin and not user.is_admin:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+                raise HTTPException(status_code=401, detail="Not an admin")
             return user
         if auth.startswith("Bearer "):
             token = auth[7:]
-            
             user = crud.get_user_by_token(db, token)
             if user is None:
                 raise HTTPException(status_code=404, detail="User not found")
             if must_be_admin and not user.is_admin:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+                raise HTTPException(status_code=401, detail="Not an admin")
             return user
     if "cookie_token" in request.cookies:
         token = request.cookies["cookie_token"]
@@ -65,7 +64,7 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
         if must_be_admin and not user.is_admin:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+            raise HTTPException(status_code=401, detail="Not an admin")
         return user
     raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -251,27 +250,19 @@ def add_standard_to_user(request: Request, user: str, jazz_standard: str, db: Se
 @app.get("/api/users/{user}/jazz_standards/", response_model=List[schemas.UserJazzStandard])
 def get_user_standards(request: Request, user: str, db: Session = Depends(get_db)):
     current_user = check_auth(db, request)
-    is_username_ = utils.is_username(user)
     if not current_user.is_admin:
-        if is_username_:
-            if current_user.username != user:
-                raise HTTPException(status_code=401, detail="Unauthorized")
-        else:
-            if current_user.id != user:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+        if current_user.username != user and current_user.id != int(user):
+            raise HTTPException(status_code=401, detail="Unauthorized")
     return crud.get_user_standards(db, **utils.userstr(user))
 
 @app.delete("/api/users/{user}/jazz_standards/{jazz_standard}", response_model=schemas.UserJazzStandard)
 def delete_user_standard(request: Request, user: str, jazz_standard: str, db: Session = Depends(get_db)):
     current_user = check_auth(db, request)
-    is_username_ = utils.is_username(user)
+    # all that stuff that's checking if something is a username or id goes to hell. lets just check if the user is admin, if not, check if it's me
     if not current_user.is_admin:
-        if is_username_:
-            if current_user.username != user:
-                raise HTTPException(status_code=401, detail="Unauthorized")
-        else:
-            if current_user.id != user:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+        if current_user.username != user and current_user.id != int(user):
+            logging.info(f"User {current_user.username}:{current_user.id} is not an admin and not {user}")
+            raise HTTPException(status_code=401, detail="Not an admin and not you")
     db_user_standard = crud.user_knows_standard(db, **utils.userstr(user), **utils.jazz_standardstr(jazz_standard))
     if db_user_standard is None:
         raise HTTPException(status_code=404, detail="User Jazz Standard not found")

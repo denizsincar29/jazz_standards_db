@@ -1,9 +1,22 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <title>Список джазовых стандартов</title>
+    {# chatgpt gave me this css#}
+    <style>
+        .standard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            /* Align items with space between */
+            margin-bottom: 5px;
+        }
+    </style>
+
 </head>
+
 <body>
     <h1>{{ user.name }}!</h1>
     <h2>Ваши джазовые стандарты:</h2>
@@ -12,7 +25,10 @@
     <h3>{{ style }}</h3>
     <ul>
         {% for standard in standards %}
-        <li>{{ standard.title }} ({{ standard.composer }})</li>
+        <li class="standard-item">
+            <span>{{ standard.title }} ({{ standard.composer }})</span>
+            <button class="delete-btn" data-standard-id="{{ standard.id }}">Удалить</button>
+        </li>
         {% endfor %}
     </ul>
     {% endfor %}
@@ -30,5 +46,49 @@
             {% endfor %}
         </select>
         <button type="submit">Добавить</button>
+    </form>
+    <script>
+        const user_id = {{ user.id }};
+        // it's in cookies
+        const cookie_token = document.cookie.split('; ').find(row => row.startsWith('cookie_token=')).split('=')[1];
+        document.addEventListener('click', function (event) {
+            if (event.target.classList.contains('delete-btn')) {
+                event.preventDefault();
+                const standardId = event.target.dataset.standardId;
+
+                if (confirm("Вы уверены, что хотите удалить этот стандарт?")) {
+                    deleteStandard(standardId, event.target.closest('li'));
+                }
+            }
+        });
+
+        async function deleteStandard(standardId, liElement) {
+            try {
+                // @app.delete("/api/users/{user}/jazz_standards/{jazz_standard}", response_model=schemas.UserJazzStandard)
+                const response = await fetch(`/api/users/${user_id}/jazz_standards/${standardId}`, {
+                    method: 'DELETE',
+                    // auth token
+                    headers: {
+                        "authorization": "Bearer " + cookie_token
+                    }
+                });
+
+                if (response.ok) {
+                    liElement.remove(); // Remove the li from the DOM.
+                } else {
+                    console.error('Ошибка удаления стандарта:', response);
+                    alert('Ошибка удаления стандарта')
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении стандарта:', error);
+                alert('Ошибка при удалении стандарта');
+            }
+        }
+
+
+
+    </script>
+
 </body>
+
 </html>
