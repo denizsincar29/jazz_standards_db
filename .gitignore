@@ -2,3 +2,4 @@
 *.db
 *.log
 __pycache__/
+postgres_data/
