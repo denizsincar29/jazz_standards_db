@@ -15,7 +15,7 @@ services:
       - DB_NAME=${DB_NAME}
 
   db:
-    image: postgres:15
+    image: postgres:17
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
