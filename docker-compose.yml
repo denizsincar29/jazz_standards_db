@@ -13,6 +13,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=${DB_NAME}
+      - IN_DOCKER=true  # python will use db instead of localhost
 
   db:
     image: postgres:17

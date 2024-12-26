@@ -9,6 +9,10 @@ url_start = "postgresql+psycopg://jazz:jazz@localhost/"  # use psycopg3! it's fa
 # if there is USE_SQLITE env variable set to "1", use sqlite db
 if os.environ.get("USE_SQLITE") == "1":
     url_start = "sqlite:///"
+else:
+    if os.environ.get("IN_DOCKER"):  # hostname is db
+        logging.info("Using db hostname with docker")
+        url_start.replace("localhost", "db")
 # if there is test environment variable set to "1" or "2", use db test1 or test2
 if os.environ.get("TEST_ENV") == "1":
     SQLALCHEMY_DATABASE_URL = f"{url_start}test1"
