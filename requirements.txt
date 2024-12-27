@@ -4,5 +4,7 @@ fastapi
 uvicorn
 psycopg  # not 2, but 3
 python-dotenv
+jinja2
+python-multipart
 # anything else i forgot?
 # and of course, install postgresql

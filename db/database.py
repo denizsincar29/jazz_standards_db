@@ -4,15 +4,20 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import logging
 logging.basicConfig(level=logging.INFO)
 
+jazz_username = "jazz"
+jazz_password = "jazz"
+jazz_host = "localhost"
+# if in_docker, than username is $DB_USER and password is $DB_PASSWORD
+if os.environ.get("IN_DOCKER"):
+    jazz_username = os.environ.get("DB_USER")
+    jazz_password = os.environ.get("DB_PASSWORD")
+    jazz_host = "db"
 
-url_start = "postgresql+psycopg://jazz:jazz@localhost/"  # use psycopg3! it's faster and better
+
+url_start = f"postgresql+psycopg://{jazz_username}:{jazz_password}@{jazz_host}:5432/"
 # if there is USE_SQLITE env variable set to "1", use sqlite db
 if os.environ.get("USE_SQLITE") == "1":
     url_start = "sqlite:///"
-else:
-    if os.environ.get("IN_DOCKER"):  # hostname is db
-        logging.info("Using db hostname with docker")
-        url_start.replace("localhost", "db")
 # if there is test environment variable set to "1" or "2", use db test1 or test2
 if os.environ.get("TEST_ENV") == "1":
     SQLALCHEMY_DATABASE_URL = f"{url_start}test1"
