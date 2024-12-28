@@ -4,19 +4,19 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 import logging
 logging.basicConfig(level=logging.INFO)
 
-jazz_username = "jazz"
-jazz_password = "jazz"
-jazz_host = "localhost"
+jazz_username = os.environ.get("DB_USER", "jazz")
+jazz_password = os.environ.get("DB_PASSWORD", "jazz")
+jazz_host = os.environ.get("DB_HOST", "localhost")
 # if in_docker, than username is $DB_USER and password is $DB_PASSWORD
 if os.environ.get("IN_DOCKER"):
-    jazz_username = os.environ.get("DB_USER")
-    jazz_password = os.environ.get("DB_PASSWORD")
     jazz_host = "db"
 
 
 url_start = f"postgresql+psycopg://{jazz_username}:{jazz_password}@{jazz_host}:5432/"
 # if there is USE_SQLITE env variable set to "1", use sqlite db
 if os.environ.get("USE_SQLITE") == "1":
+    if os.environ.get("IN_DOCKER"):
+        raise NotImplementedError("SQLite is not supported in docker")  # too lazy to implement it
     url_start = "sqlite:///"
 # if there is test environment variable set to "1" or "2", use db test1 or test2
 if os.environ.get("TEST_ENV") == "1":
