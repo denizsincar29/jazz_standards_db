@@ -4,7 +4,7 @@ import os
 os.environ["TEST_ENV"] = "2"  # use other test database
 from db.models import JazzStyle # noqa
 from fastapi.testclient import TestClient  # noqa
-from app import app  # noqa
+from main import app  # noqa
 
 client = TestClient(app)
 
