@@ -20,7 +20,7 @@ EXPOSE 8000
 RUN chmod +x postgrest.sh 
 
 # Command to run the application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 #CMD ["./postgrest.sh"]
 # postgrest.sh is a debugging script that checks db connection.
 # It's saved because it's useful for debugging purposes.

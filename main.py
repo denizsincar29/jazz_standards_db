@@ -71,12 +71,12 @@ def check_auth(db: Session, request: Request, must_be_admin: bool = False) -> mo
 # web browsers must show beautiful error pages
 # use try checkauth except return error page
 def check_auth_web(db: Session, request: Request, must_be_admin: bool = False, go_back: str = None, go_login: bool = False) -> models.User:
+    # return (user, error) tuple
     try:
         return check_auth(db, request, must_be_admin), None
     except HTTPException as e:
         if go_login:
-            with open("html/login.html", encoding="UTF-8") as f:
-                return None, HTMLResponse(content=f.read())
+            return None, templates.TemplateResponse(request, "login.html", {"incorrect": True})
         return None, error_page(request, e.status_code, e.detail, go_back)
         # should I instead make a dict "russian"? Later, maybe
 
@@ -283,10 +283,8 @@ def teardown(db: Session = Depends(get_db)):
 
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request, db: Session = Depends(get_db)):
-    # if there is no username cookie, redirect to html/login.html
     if "username" not in request.cookies:
-        with open("html/login.html", encoding="UTF-8") as f:
-            return HTMLResponse(content=f.read())
+        return templates.TemplateResponse(request, "login.html", {"incorrect": False})
     # if there is a username cookie, redirect to html/index.html but check if the user is authorized
     user, error = check_auth_web(db, request, go_login=True)
     if error is not None:
@@ -311,14 +309,14 @@ def login(username: Annotated[str, Form()], password: Annotated[str, Form()], re
     # check if there is a user with the given username
     user = crud.get_user(db, username = username)
     if user is None:
-        return error_page(Request, 404, "Пользователь не найден", goback="/")
+        return templates.TemplateResponse(request, "login.html", {"incorrect": True})
     # get the salt of the user
     salt = crud.get_salt(db, username)
     # hash the password with the salt
     password_hash = bcrypt.hashpw(password.encode(), salt)
     # check if the password is correct
     if not crud.check_password(db, username, password_hash):
-        return error_page(request, 401, "Неправильный пароль", goback="/")
+        return templates.TemplateResponse(request, "login.html", {"incorrect": True})
     # create a token for the user
     token = token_urlsafe(32)
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
