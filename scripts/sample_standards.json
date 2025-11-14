@@ -1,0 +1,59 @@
+[
+  {
+    "title": "All the Things You Are",
+    "composer": "Jerome Kern",
+    "style": "swing",
+    "additional_note": "From the musical 'Very Warm for May'"
+  },
+  {
+    "title": "Autumn Leaves",
+    "composer": "Joseph Kosma",
+    "style": "swing",
+    "additional_note": "Originally 'Les Feuilles Mortes'"
+  },
+  {
+    "title": "Blue Bossa",
+    "composer": "Kenny Dorham",
+    "style": "bossa_nova"
+  },
+  {
+    "title": "Take Five",
+    "composer": "Paul Desmond",
+    "style": "modal",
+    "additional_note": "Famous 5/4 time signature"
+  },
+  {
+    "title": "Summertime",
+    "composer": "George Gershwin",
+    "style": "swing",
+    "additional_note": "From 'Porgy and Bess'"
+  },
+  {
+    "title": "Giant Steps",
+    "composer": "John Coltrane",
+    "style": "bebop",
+    "additional_note": "Coltrane changes"
+  },
+  {
+    "title": "So What",
+    "composer": "Miles Davis",
+    "style": "modal",
+    "additional_note": "From 'Kind of Blue'"
+  },
+  {
+    "title": "The Girl from Ipanema",
+    "composer": "Antonio Carlos Jobim",
+    "style": "bossa_nova",
+    "additional_note": "Also known as 'Garota de Ipanema'"
+  },
+  {
+    "title": "Confirmation",
+    "composer": "Charlie Parker",
+    "style": "bebop"
+  },
+  {
+    "title": "Night and Day",
+    "composer": "Cole Porter",
+    "style": "swing"
+  }
+]

@@ -1,28 +1,36 @@
 services:
-  web:
+  app:
     build: .
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_NAME=${DB_NAME}
-      - IN_DOCKER=true  # python will use db instead of localhost
+      - DB_USER=jazz
+      - DB_PASSWORD=jazz
+      - DB_NAME=jazz
+      - PORT=8000
+      - JWT_SECRET=change-me-in-production
+      - ENVIRONMENT=production
 
   db:
-    image: postgres:17
+    image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=jazz
+      - POSTGRES_PASSWORD=jazz
+      - POSTGRES_DB=jazz
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:6432"  # expose port 5432 to localhost but map it to 6432
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jazz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
