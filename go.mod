@@ -1,6 +1,6 @@
 module github.com/denizsincar29/jazz_standards_db
 
-go 1.24.10
+go 1.21
 
 require (
 	github.com/gorilla/mux v1.8.1
