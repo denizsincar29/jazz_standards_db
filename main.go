@@ -67,22 +67,38 @@ func main() {
 	// Serve static files (PWA)
 	staticDir := "./static"
 	if _, err := os.Stat(staticDir); err == nil {
-		// Serve static files
-		r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
-		
-		// Serve index.html for root and catch-all
-		r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+		// Serve service worker (must be at root for PWA)
+		r.HandleFunc("/sw.js", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/javascript")
+			http.ServeFile(w, r, filepath.Join(staticDir, "sw.js"))
 		})
 		
 		// Serve manifest.json
 		r.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/manifest+json")
 			http.ServeFile(w, r, filepath.Join(staticDir, "manifest.json"))
 		})
 		
-		// Serve service worker
-		r.HandleFunc("/sw.js", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, filepath.Join(staticDir, "sw.js"))
+		// Serve static files (CSS, JS, images)
+		// Create a file server for the static directory
+		staticFileServer := http.FileServer(http.Dir(staticDir))
+		r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", staticFileServer))
+		
+		// Catch-all: Serve index.html for root and any unmatched routes (SPA support)
+		// This must be registered LAST to allow other routes to match first
+		r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Only serve index.html if the path doesn't start with /api
+			// and doesn't point to an actual file
+			if r.URL.Path != "/" && r.URL.Path != "" {
+				// Check if file exists
+				filePath := filepath.Join(staticDir, r.URL.Path)
+				if _, err := os.Stat(filePath); err == nil {
+					http.ServeFile(w, r, filePath)
+					return
+				}
+			}
+			// Default to index.html for SPA routing
+			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
 		})
 	}
 
