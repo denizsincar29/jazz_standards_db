@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a1a2e">
     <title>Jazz Standards DB</title>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <!-- BASE_PATH will be injected here by the server -->
+    <base href="{{BASE_PATH}}">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
     <div id="app">
@@ -162,11 +164,11 @@
 
     <div id="offline-indicator" class="hidden">Offline</div>
 
-    <script src="/static/js/api.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="static/js/api.js"></script>
+    <script src="static/js/app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('sw.js')
                 .then(reg => console.log('Service Worker registered', reg))
                 .catch(err => console.log('Service Worker registration failed', err));
         }

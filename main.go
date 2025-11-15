@@ -97,8 +97,8 @@ func main() {
 					return
 				}
 			}
-			// Default to index.html for SPA routing
-			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+			// Default to index.html for SPA routing with BASE_PATH injection
+			handlers.ServeIndexHTML(w, r)
 		})
 	}
 

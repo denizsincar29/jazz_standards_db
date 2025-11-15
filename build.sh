@@ -212,6 +212,8 @@ else
     RewriteRule ^$BASE_PATH\$ $BASE_PATH/ [R=301,L]
     
     # Strip base path and forward to app at root
+    # Add X-Forwarded-Prefix header so app knows the original base path
+    RequestHeader set X-Forwarded-Prefix "$BASE_PATH/"
     ProxyPass $BASE_PATH/ http://localhost:$SERVER_PORT/
     ProxyPassReverse $BASE_PATH/ http://localhost:$SERVER_PORT/
 
@@ -227,7 +229,8 @@ else
 </VirtualHost>
 
 # Note: You've configured BASE_PATH=$BASE_PATH in .env
-# The Go app doesn't need to know about this path - Apache handles the stripping.
+# Apache strips the base path and passes X-Forwarded-Prefix header to the app.
+# The app uses this header to serve correct static file paths.
 # Access your app at: http://yourdomain.com$BASE_PATH/
 
 # For HTTPS (recommended for production):
@@ -244,6 +247,8 @@ else
 #     RewriteEngine on
 #     RewriteRule ^$BASE_PATH\$ $BASE_PATH/ [R=301,L]
 #     
+#     # Forward with X-Forwarded-Prefix header
+#     RequestHeader set X-Forwarded-Prefix "$BASE_PATH/"
 #     ProxyPass $BASE_PATH/ http://localhost:$SERVER_PORT/
 #     ProxyPassReverse $BASE_PATH/ http://localhost:$SERVER_PORT/
 #     
