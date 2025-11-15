@@ -1,31 +1,31 @@
 #!/bin/bash
 
-# Jazz Standards DB - Interactive Setup Script for Native Deployment
-# This script helps you configure and deploy the Jazz Standards Database using systemd
+# Jazz Standards DB - Interactive Setup Script for Docker Deployment
+# This script helps you configure the Jazz Standards Database for Docker Compose
 
 set -e
 
 echo "========================================="
-echo "Jazz Standards DB - Native Setup"
+echo "Jazz Standards DB - Docker Setup"
 echo "========================================="
 echo ""
-echo "This script configures for native deployment (systemd service)"
-echo "For Docker deployment, use build_docker.sh instead"
+echo "This script configures for Docker deployment"
+echo "For native deployment (systemd), use build.sh instead"
 echo ""
 
 # Get current directory
 INSTALL_DIR=$(pwd)
-CURRENT_USER=$(whoami)
-CURRENT_GROUP=$(id -gn)
 
 echo "Installation directory: $INSTALL_DIR"
-echo "User: $CURRENT_USER"
-echo "Group: $CURRENT_GROUP"
 echo ""
 
-# Ask for server port
-read -p "Enter port for the application to listen on [8000]: " SERVER_PORT
-SERVER_PORT=${SERVER_PORT:-8000}
+# Ask for external port
+read -p "Enter external port for the application (host port) [8000]: " EXTERNAL_PORT
+EXTERNAL_PORT=${EXTERNAL_PORT:-8000}
+
+# Ask for database external port
+read -p "Enter external port for PostgreSQL (host port) [5432]: " DB_EXTERNAL_PORT
+DB_EXTERNAL_PORT=${DB_EXTERNAL_PORT:-5432}
 
 # Ask for base path
 echo ""
@@ -36,12 +36,6 @@ read -p "Enter base path [empty for root]: " BASE_PATH
 
 # Ask for database credentials
 echo ""
-read -p "Enter database host [localhost]: " DB_HOST
-DB_HOST=${DB_HOST:-localhost}
-
-read -p "Enter database port [5432]: " DB_PORT
-DB_PORT=${DB_PORT:-5432}
-
 read -p "Enter database user [jazz]: " DB_USER
 DB_USER=${DB_USER:-jazz}
 
@@ -71,14 +65,18 @@ echo ""
 echo "Creating .env file..."
 cat > .env <<EOF
 # Database Configuration
-DB_HOST=$DB_HOST
-DB_PORT=$DB_PORT
+DB_HOST=db
+DB_PORT=5432
 DB_USER=$DB_USER
 DB_PASSWORD=$DB_PASSWORD
 DB_NAME=$DB_NAME
 
-# Server Configuration
-PORT=$SERVER_PORT
+# Server Configuration (internal container port)
+PORT=8000
+
+# External Ports (for docker-compose)
+EXTERNAL_PORT=$EXTERNAL_PORT
+DB_EXTERNAL_PORT=$DB_EXTERNAL_PORT
 
 # Base Path (for reverse proxy subpath deployment)
 BASE_PATH=$BASE_PATH
@@ -91,46 +89,6 @@ ENVIRONMENT=$ENVIRONMENT
 EOF
 
 echo "✓ Created .env file"
-
-# Create systemd service
-echo ""
-read -p "Create systemd service? (y/n) [y]: " CREATE_SERVICE
-CREATE_SERVICE=${CREATE_SERVICE:-y}
-
-if [ "$CREATE_SERVICE" = "y" ] || [ "$CREATE_SERVICE" = "Y" ]; then
-    SERVICE_NAME="jazz-standards-db"
-    
-    echo "Creating systemd service: $SERVICE_NAME.service"
-    
-    sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null <<EOF
-[Unit]
-Description=Jazz Standards Database
-After=network.target postgresql.service
-Wants=postgresql.service
-
-[Service]
-Type=simple
-User=$CURRENT_USER
-Group=$CURRENT_GROUP
-WorkingDirectory=$INSTALL_DIR
-Environment="PATH=/usr/local/bin:/usr/bin:/bin"
-EnvironmentFile=$INSTALL_DIR/.env
-ExecStart=$INSTALL_DIR/jazz_standards_db
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    echo "✓ Created systemd service"
-    echo ""
-    echo "To enable and start the service:"
-    echo "  sudo systemctl daemon-reload"
-    echo "  sudo systemctl enable $SERVICE_NAME"
-    echo "  sudo systemctl start $SERVICE_NAME"
-    echo "  sudo systemctl status $SERVICE_NAME"
-fi
 
 # Create Apache proxy configuration
 echo ""
@@ -152,14 +110,14 @@ if [ -z "$BASE_PATH" ]; then
     ServerName yourdomain.com
 
     ProxyPreserveHost On
-    ProxyPass / http://localhost:$SERVER_PORT/
-    ProxyPassReverse / http://localhost:$SERVER_PORT/
+    ProxyPass / http://localhost:$EXTERNAL_PORT/
+    ProxyPassReverse / http://localhost:$EXTERNAL_PORT/
 
     # WebSocket support
     RewriteEngine on
     RewriteCond %{HTTP:Upgrade} websocket [NC]
     RewriteCond %{HTTP:Connection} upgrade [NC]
-    RewriteRule ^/?(.*) "ws://localhost:$SERVER_PORT/\$1" [P,L]
+    RewriteRule ^/?(.*) "ws://localhost:$EXTERNAL_PORT/\$1" [P,L]
 
     # Optional: Enable compression
     <IfModule mod_deflate.c>
@@ -181,8 +139,8 @@ if [ -z "$BASE_PATH" ]; then
 #     SSLCertificateKeyFile /path/to/key.pem
 #     
 #     ProxyPreserveHost On
-#     ProxyPass / http://localhost:$SERVER_PORT/
-#     ProxyPassReverse / http://localhost:$SERVER_PORT/
+#     ProxyPass / http://localhost:$EXTERNAL_PORT/
+#     ProxyPassReverse / http://localhost:$EXTERNAL_PORT/
 #     
 #     # Add security headers
 #     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -202,14 +160,14 @@ else
 
     # Proxy to application
     ProxyPreserveHost On
-    ProxyPass $BASE_PATH http://localhost:$SERVER_PORT/
-    ProxyPassReverse $BASE_PATH http://localhost:$SERVER_PORT/
+    ProxyPass $BASE_PATH http://localhost:$EXTERNAL_PORT/
+    ProxyPassReverse $BASE_PATH http://localhost:$EXTERNAL_PORT/
 
     # WebSocket support
     RewriteEngine on
     RewriteCond %{HTTP:Upgrade} websocket [NC]
     RewriteCond %{HTTP:Connection} upgrade [NC]
-    RewriteRule ^$BASE_PATH/?(.*) "ws://localhost:$SERVER_PORT/\$1" [P,L]
+    RewriteRule ^$BASE_PATH/?(.*) "ws://localhost:$EXTERNAL_PORT/\$1" [P,L]
 
     # Security headers
     Header always set X-Content-Type-Options "nosniff"
@@ -229,8 +187,8 @@ else
 #     SSLCertificateKeyFile /path/to/key.pem
 #     
 #     ProxyPreserveHost On
-#     ProxyPass $BASE_PATH http://localhost:$SERVER_PORT/
-#     ProxyPassReverse $BASE_PATH http://localhost:$SERVER_PORT/
+#     ProxyPass $BASE_PATH http://localhost:$EXTERNAL_PORT/
+#     ProxyPassReverse $BASE_PATH http://localhost:$EXTERNAL_PORT/
 #     
 #     # Add security headers
 #     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -251,38 +209,28 @@ echo "Setup Complete!"
 echo "========================================="
 echo ""
 echo "Configuration Summary:"
-echo "  - Server Port: $SERVER_PORT"
+echo "  - External Port: $EXTERNAL_PORT (host) -> 8000 (container)"
+echo "  - Database Port: $DB_EXTERNAL_PORT (host) -> 5432 (container)"
 echo "  - Base Path: ${BASE_PATH:-/ (root)}"
-echo "  - Database: $DB_HOST:$DB_PORT/$DB_NAME"
 echo "  - Environment: $ENVIRONMENT"
 echo "  - Install Dir: $INSTALL_DIR"
 echo ""
 echo "Files created:"
 echo "  ✓ .env - Environment configuration"
-if [ "$CREATE_SERVICE" = "y" ] || [ "$CREATE_SERVICE" = "Y" ]; then
-    echo "  ✓ /etc/systemd/system/$SERVICE_NAME.service - Systemd service"
-fi
 echo "  ✓ $PROXY_FILE - Apache configuration"
 echo ""
 echo "Next steps:"
 echo ""
-echo "1. Build the application:"
-echo "   go build -o jazz_standards_db main.go"
+echo "1. Start with Docker Compose:"
+echo "   docker-compose up -d"
 echo ""
-if [ "$CREATE_SERVICE" = "y" ] || [ "$CREATE_SERVICE" = "Y" ]; then
-    echo "2. Start the systemd service:"
-    echo "   sudo systemctl daemon-reload"
-    echo "   sudo systemctl enable $SERVICE_NAME"
-    echo "   sudo systemctl start $SERVICE_NAME"
-    echo ""
-fi
-echo "3. Configure Apache (paste contents of $PROXY_FILE):"
+echo "2. Configure Apache (paste contents of $PROXY_FILE):"
 echo "   sudo nano /etc/apache2/sites-available/yourdomain.conf"
 echo "   sudo a2ensite yourdomain"
 echo "   sudo systemctl restart apache2"
 echo ""
-echo "4. Create first admin user:"
-echo "   curl -X POST http://localhost:$SERVER_PORT/api/admin \\"
+echo "3. Create first admin user:"
+echo "   curl -X POST http://localhost:$EXTERNAL_PORT/api/admin \\"
 echo "     -H 'Content-Type: application/json' \\"
 echo "     -d '{\"username\":\"admin\",\"name\":\"Admin\",\"password\":\"your-password\"}'"
 echo ""

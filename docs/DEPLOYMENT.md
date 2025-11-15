@@ -2,18 +2,34 @@
 
 ## Interactive Setup
 
-The easiest way to configure the application is using the interactive setup script:
+The easiest way to configure the application is using the appropriate interactive setup script:
+
+### For Docker Deployment
+
+```bash
+./build_docker.sh
+```
+
+This will:
+1. Create `.env` file for Docker configuration
+2. Ask for external port (host port mapping) - container always uses 8000 internally
+3. Ask for database credentials, JWT secret
+4. Ask for base path (for subpath deployments)
+5. Generate Apache proxy configuration in `proxy.txt`
+
+### For Native Deployment (systemd)
 
 ```bash
 ./build.sh
 ```
 
 This will:
-1. Create `.env` file with your configuration
-2. Ask for external port, database credentials, JWT secret
-3. Ask for base path (for subpath deployments)
-4. Optionally create a systemd service
-5. Generate Apache proxy configuration in `proxy.txt`
+1. Create `.env` file for native deployment
+2. Ask for server port (the port the Go application listens on)
+3. Ask for database host, port, and credentials
+4. Ask for base path (for subpath deployments)
+5. Optionally create a systemd service
+6. Generate Apache proxy configuration in `proxy.txt`
 
 The script automatically detects:
 - Current directory for installation

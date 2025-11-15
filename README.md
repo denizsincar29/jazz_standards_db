@@ -23,7 +23,7 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 ## Quick Start
 
-### Using Interactive Setup (Recommended)
+### Option 1: Docker Deployment (Recommended)
 
 1. **Clone the repository**
    ```bash
@@ -31,15 +31,15 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    cd jazz_standards_db
    ```
 
-2. **Run the interactive setup**
+2. **Run the Docker setup script**
    ```bash
-   ./build.sh
+   ./build_docker.sh
    ```
    
    This will:
-   - Create `.env` configuration file
-   - Ask for external port, base path, and other settings
-   - Optionally create a systemd service
+   - Create `.env` configuration file for Docker
+   - Ask for external port (host port mapping)
+   - Ask for base path and database credentials
    - Generate Apache proxy configuration in `proxy.txt`
 
 3. **Start with Docker Compose**
@@ -48,13 +48,39 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    ```
 
 4. **Access the application**
-   - Open http://localhost:8000 in your browser (or your custom port)
+   - Open http://localhost:8000 in your browser (or your configured external port)
    - Create the first admin account via API:
      ```bash
      curl -X POST http://localhost:8000/api/admin \
        -H "Content-Type: application/json" \
        -d '{"username":"admin","name":"Admin User","password":"your-secure-password"}'
      ```
+
+### Option 2: Native Deployment (systemd)
+
+1. **Clone and run native setup**
+   ```bash
+   git clone https://github.com/denizsincar29/jazz_standards_db.git
+   cd jazz_standards_db
+   ./build.sh
+   ```
+   
+   This will:
+   - Create `.env` configuration file for native deployment
+   - Ask for server port (the port the Go app listens on)
+   - Ask for database host, port, and credentials
+   - Optionally create a systemd service
+   - Generate Apache proxy configuration in `proxy.txt`
+
+2. **Build and start the application**
+   ```bash
+   go build -o jazz_standards_db main.go
+   sudo systemctl daemon-reload
+   sudo systemctl enable jazz-standards-db
+   sudo systemctl start jazz-standards-db
+   ```
+
+3. **Access the application at the port you configured**
 
 ### Local Development
 
@@ -80,7 +106,7 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 3. **Configure environment**
    ```bash
-   ./build.sh  # Interactive setup
+   ./build.sh  # Interactive setup for native deployment
    # Or manually create .env file with your settings
    ```
 
@@ -344,19 +370,28 @@ ENVIRONMENT=development
 
 ### Configuration
 
-Use the interactive setup script:
+Use the appropriate interactive setup script:
 
+**For Docker deployment:**
+```bash
+./build_docker.sh
+```
+
+**For native deployment (systemd):**
 ```bash
 ./build.sh
 ```
 
-This will guide you through:
-- External port configuration
+Both scripts guide you through:
+- Port configuration (external port for Docker, server port for native)
 - Base path for subpath deployments
 - Database credentials
-- JWT secret generation
-- Systemd service creation
+- JWT secret generation (auto-generated if not provided)
 - Apache proxy configuration
+
+Native deployment also offers:
+- Systemd service creation
+- Auto-detects user, group, and working directory
 
 The `.env` file is gitignored and won't be affected by `git pull`.
 
