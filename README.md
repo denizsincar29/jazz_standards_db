@@ -365,17 +365,20 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed Apache configuration i
 - HTTPS configuration
 - WebSocket support
 
-Quick example for subpath:
-```apache
-ProxyPass /jazzdb http://localhost:8000/
-ProxyPassReverse /jazzdb http://localhost:8000/
-```
+Quick example for subpath deployment:
 
-Set environment variable:
-```yaml
-environment:
-  - BASE_PATH=/jazzdb
-```
+1. **Apache config:**
+   ```apache
+   ProxyPass /jazzdb http://localhost:8000/
+   ProxyPassReverse /jazzdb http://localhost:8000/
+   ```
+
+2. **Set BASE_PATH in .env:**
+   ```env
+   BASE_PATH=/jazzdb
+   ```
+
+The application automatically handles subpath routing based on the BASE_PATH environment variable.
 
 ### Production Checklist
 

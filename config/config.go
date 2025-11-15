@@ -17,6 +17,7 @@ type Config struct {
 	Port        string
 	JWTSecret   string
 	Environment string
+	BasePath    string
 }
 
 var AppConfig *Config
@@ -37,6 +38,7 @@ func Load() error {
 		Port:        getEnv("PORT", "8000"),
 		JWTSecret:   getEnv("JWT_SECRET", "change-me-in-production"),
 		Environment: getEnv("ENVIRONMENT", "development"),
+		BasePath:    getEnv("BASE_PATH", ""),
 	}
 
 	return nil

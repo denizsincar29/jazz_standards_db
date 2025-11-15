@@ -95,24 +95,13 @@ If you want to access the app at `http://yourdomain.com/jazzdb/`:
 
 **2. Application Configuration:**
 
-For subpath deployment, you need to update the Go application to handle the base path. Add to `main.go`:
+Set the base path via environment variable in `.env`:
 
-```go
-// Add before router setup
-basePath := os.Getenv("BASE_PATH")
-if basePath == "" {
-    basePath = "/"
-}
-
-// Then wrap your router
-if basePath != "/" {
-    mainRouter := mux.NewRouter()
-    mainRouter.PathPrefix(basePath).Handler(http.StripPrefix(basePath, r))
-    r = mainRouter
-}
+```env
+BASE_PATH=/jazzdb
 ```
 
-**3. Update docker-compose.yml or docker-compose.override.yml:**
+Or in `docker-compose.yml`:
 
 ```yaml
 services:
@@ -121,7 +110,9 @@ services:
       - BASE_PATH=/jazzdb
 ```
 
-**4. Update PWA manifest paths:**
+The application will automatically handle the base path routing. No code changes needed.
+
+**3. Update PWA manifest paths:**
 
 In `static/manifest.json`:
 ```json
