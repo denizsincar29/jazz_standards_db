@@ -1,94 +1,102 @@
 #!/bin/bash
 
-# Interactive script to create admin users in the Jazz Standards DB
-# This script connects directly to the PostgreSQL database
+# Interactive script to create an admin user in the Jazz Standards DB
+# This script reads the database configuration from .env and creates an admin user
 
 set -e
 
-# Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+# Get the directory of this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo -e "${BLUE}=== Jazz Standards DB - Create Admin User ===${NC}"
-echo ""
-
-# Load environment variables from .env if it exists
-if [ -f .env ]; then
-    echo -e "${GREEN}Loading configuration from .env...${NC}"
-    export $(cat .env | grep -v '^#' | xargs)
+# Load .env file
+if [ -f "$PROJECT_DIR/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_DIR/.env" | xargs)
 else
-    echo -e "${RED}Warning: .env file not found. Using defaults.${NC}"
+    echo "Error: .env file not found in $PROJECT_DIR"
+    echo "Please run ./build.sh or ./build_docker.sh first to create the configuration."
+    exit 1
 fi
+
+echo "================================================"
+echo "  Jazz Standards DB - Create Admin User"
+echo "================================================"
+echo ""
 
 # Get database connection details
-DB_HOST=${DB_HOST:-localhost}
-DB_PORT=${DB_PORT:-5432}
-DB_USER=${DB_USER:-jazz}
-DB_PASSWORD=${DB_PASSWORD:-jazz}
-DB_NAME=${DB_NAME:-jazz}
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:-jazz}"
+DB_USER="${DB_USER:-jazz}"
+DB_PASSWORD="${DB_PASSWORD:-jazz}"
 
 # Prompt for admin details
+read -p "Enter admin username: " ADMIN_USERNAME
+read -p "Enter admin display name: " ADMIN_NAME
+read -s -p "Enter admin password: " ADMIN_PASSWORD
 echo ""
-echo -e "${BLUE}Enter admin user details:${NC}"
-read -p "Username: " USERNAME
-read -p "Full Name: " NAME
-read -sp "Password: " PASSWORD
+read -s -p "Confirm admin password: " ADMIN_PASSWORD_CONFIRM
 echo ""
 
-# Validate inputs
-if [ -z "$USERNAME" ] || [ -z "$NAME" ] || [ -z "$PASSWORD" ]; then
-    echo -e "${RED}Error: All fields are required${NC}"
+if [ "$ADMIN_PASSWORD" != "$ADMIN_PASSWORD_CONFIRM" ]; then
+    echo "Error: Passwords do not match"
     exit 1
 fi
 
-# Hash the password using Python (bcrypt)
-echo ""
-echo -e "${GREEN}Hashing password...${NC}"
-
-# Check if Python 3 is available
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}Error: python3 is required but not installed${NC}"
+if [ -z "$ADMIN_USERNAME" ] || [ -z "$ADMIN_NAME" ] || [ -z "$ADMIN_PASSWORD" ]; then
+    echo "Error: All fields are required"
     exit 1
 fi
 
-# Install bcrypt if needed
-python3 -c "import bcrypt" 2>/dev/null || {
-    echo -e "${BLUE}Installing bcrypt...${NC}"
-    pip3 install bcrypt --quiet || {
-        echo -e "${RED}Error: Failed to install bcrypt. Please install it manually: pip3 install bcrypt${NC}"
-        exit 1
+echo ""
+echo "Creating admin user..."
+
+# Generate bcrypt hash using Go
+HASH=$(go run << 'GOCODE'
+package main
+import (
+    "fmt"
+    "os"
+    "golang.org/x/crypto/bcrypt"
+)
+func main() {
+    password := os.Args[1]
+    hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+        os.Exit(1)
     }
+    fmt.Print(string(hash))
 }
+GOCODE
+"$ADMIN_PASSWORD" 2>/dev/null)
 
-# Hash the password
-PASSWORD_HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw('$PASSWORD'.encode(), bcrypt.gensalt()).decode())")
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate password hash"
+    echo "Make sure Go is installed and golang.org/x/crypto/bcrypt is available"
+    exit 1
+fi
 
-# Generate a random token
-TOKEN=$(openssl rand -hex 32)
-
-echo -e "${GREEN}Creating admin user in database...${NC}"
-
-# Insert into database
-PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME << EOSQL
-INSERT INTO users (username, name, password_hash, is_admin, token)
-VALUES ('$USERNAME', '$NAME', '$PASSWORD_HASH', true, '$TOKEN')
+# Insert admin into database
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" << SQL
+INSERT INTO users (username, name, password_hash, is_admin, created_at)
+VALUES ('$ADMIN_USERNAME', '$ADMIN_NAME', '$HASH', true, NOW())
 ON CONFLICT (username) DO UPDATE
-SET is_admin = true,
-    password_hash = EXCLUDED.password_hash,
-    token = EXCLUDED.token;
-EOSQL
+SET password_hash = EXCLUDED.password_hash,
+    is_admin = true;
+SQL
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo -e "${GREEN}=== Admin user created successfully! ===${NC}"
+    echo "✓ Admin user '$ADMIN_USERNAME' created successfully!"
     echo ""
-    echo -e "${BLUE}Username:${NC} $USERNAME"
-    echo -e "${BLUE}Token:${NC} $TOKEN"
-    echo ""
-    echo -e "${GREEN}You can now login with your username and password.${NC}"
+    echo "You can now log in at:"
+    if [ -n "$BASE_PATH" ] && [ "$BASE_PATH" != "/" ]; then
+        echo "  http://yourdomain.com${BASE_PATH}"
+    else
+        echo "  http://yourdomain.com/"
+    fi
 else
-    echo -e "${RED}Error: Failed to create admin user${NC}"
+    echo "Error: Failed to create admin user"
     exit 1
 fi
