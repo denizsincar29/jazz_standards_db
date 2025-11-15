@@ -31,13 +31,21 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    cd jazz_standards_db
    ```
 
-2. **Start with Docker Compose**
+2. **(Optional) Customize the port**
+   
+   To use a different port without modifying `docker-compose.yml`:
+   ```bash
+   cp docker-compose.override.yml.example docker-compose.override.yml
+   # Edit docker-compose.override.yml to set your desired port
+   ```
+
+3. **Start with Docker Compose**
    ```bash
    docker-compose up --build
    ```
 
-3. **Access the application**
-   - Open http://localhost:8000 in your browser
+4. **Access the application**
+   - Open http://localhost:8000 in your browser (or your custom port)
    - Create the first admin account via API:
      ```bash
      curl -X POST http://localhost:8000/api/admin \
@@ -328,6 +336,57 @@ JWT_SECRET=change-me-in-production
 # Environment
 ENVIRONMENT=development
 ```
+
+## Deployment
+
+### Custom Port Configuration
+
+To change the port without modifying version-controlled files:
+
+1. Copy the override template:
+   ```bash
+   cp docker-compose.override.yml.example docker-compose.override.yml
+   ```
+
+2. Edit `docker-compose.override.yml` to set your port:
+   ```yaml
+   services:
+     app:
+       ports:
+         - "8080:8000"  # Your custom port
+   ```
+
+3. The override file is gitignored and won't be affected by `git pull`
+
+### Apache Reverse Proxy
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed Apache configuration including:
+- Root path setup
+- Subpath setup (e.g., /jazzdb)
+- HTTPS configuration
+- WebSocket support
+
+Quick example for subpath:
+```apache
+ProxyPass /jazzdb http://localhost:8000/
+ProxyPassReverse /jazzdb http://localhost:8000/
+```
+
+Set environment variable:
+```yaml
+environment:
+  - BASE_PATH=/jazzdb
+```
+
+### Production Checklist
+
+- [ ] Use HTTPS with valid SSL certificate
+- [ ] Set strong JWT_SECRET
+- [ ] Configure firewall to block direct port access
+- [ ] Set up database backups
+- [ ] Configure log rotation
+- [ ] Monitor resource usage
+- [ ] Document your configuration in `changes.md`
 
 ## Security Considerations
 

@@ -92,3 +92,51 @@
 
 - исправил ошибку после переименования app.py в main.py, в докере оставалась команда uvicorn app:app
 - Страница входа теперь не направляет на 404/401 при неправильном вводе данных, а показывает под заголовком <p>Неправильный логин или пароль</p>
+
+# 15.11.2024 (Go Rewrite)
+
+- Полностью переписал проект на Go
+- Добавлена поддержка PWA (Progressive Web App)
+- Добавлена система категорий для организации стандартов
+- Улучшен поиск и фильтрация
+- Docker образ уменьшен с 200MB до 10MB
+- Добавлена документация по развёртыванию
+
+## Настройка портов
+
+Для изменения порта без модификации `docker-compose.yml`:
+
+1. Скопировать пример:
+   ```bash
+   cp docker-compose.override.yml.example docker-compose.override.yml
+   ```
+
+2. Отредактировать `docker-compose.override.yml`:
+   ```yaml
+   services:
+     app:
+       ports:
+         - "ТВОЙ_ПОРТ:8000"
+   ```
+
+3. Файл `docker-compose.override.yml` добавлен в `.gitignore` и не будет затронут при `git pull`
+
+## Настройка Apache reverse proxy
+
+Подробная документация в `docs/DEPLOYMENT.md`:
+- Конфигурация для корневого пути
+- Конфигурация для подпути (например, /jazzdb)
+- Настройка HTTPS
+- Необходимые модули Apache
+
+Пример для подпути `/jazzdb`:
+```apache
+ProxyPass /jazzdb http://localhost:8000/
+ProxyPassReverse /jazzdb http://localhost:8000/
+```
+
+Также нужно установить переменную окружения:
+```yaml
+environment:
+  - BASE_PATH=/jazzdb
+```

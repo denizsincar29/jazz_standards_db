@@ -1,0 +1,19 @@
+# docker-compose.override.yml.example
+# 
+# Copy this file to docker-compose.override.yml to customize your local configuration
+# without affecting the version-controlled docker-compose.yml
+#
+# Example: Change the port to 8080
+# cp docker-compose.override.yml.example docker-compose.override.yml
+# Edit docker-compose.override.yml to set your desired port
+
+version: '3.8'
+
+services:
+  app:
+    ports:
+      - "8080:8000"  # Change 8080 to your desired host port
+    environment:
+      # Override any environment variables here
+      # - JWT_SECRET=your-custom-secret
+      # - ENVIRONMENT=development
