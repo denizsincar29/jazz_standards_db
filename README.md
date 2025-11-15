@@ -49,14 +49,29 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    docker-compose up --build
    ```
 
-4. **Access the application**
+4. **Create the first admin account**
+   
+   The first admin must be created via the special `/api/admin` endpoint (only works when no admins exist):
+   
+   ```bash
+   curl -X POST http://localhost:8000/api/admin \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","name":"Admin User","password":"your-secure-password"}'
+   ```
+   
+   **Note:** If deployed at a subpath (e.g., `/jazz`), use:
+   ```bash
+   curl -X POST http://localhost:8000/jazz/api/admin \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","name":"Admin User","password":"your-secure-password"}'
+   ```
+   
+   The response will include your token. Save it or login again through the web UI.
+
+5. **Access the application**
    - Open http://localhost:8000 in your browser (or your configured external port)
-   - Create the first admin account via API:
-     ```bash
-     curl -X POST http://localhost:8000/api/admin \
-       -H "Content-Type: application/json" \
-       -d '{"username":"admin","name":"Admin User","password":"your-secure-password"}'
-     ```
+   - Login with your admin credentials
+   - Start adding and approving jazz standards!
 
 ### Option 2: Native Deployment (systemd)
 

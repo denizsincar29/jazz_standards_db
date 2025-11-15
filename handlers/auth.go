@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/denizsincar29/jazz_standards_db/config"
 	"github.com/denizsincar29/jazz_standards_db/database"
 	"github.com/denizsincar29/jazz_standards_db/models"
 	"github.com/denizsincar29/jazz_standards_db/utils"
@@ -69,11 +70,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get cookie path from config
+	cookiePath := "/"
+	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
+		cookiePath = config.AppConfig.BasePath + "/"
+	}
+
 	// Set cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     "/",
+		Path:     cookiePath,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -116,11 +123,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get cookie path from config
+	cookiePath := "/"
+	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
+		cookiePath = config.AppConfig.BasePath + "/"
+	}
+
 	// Set cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     "/",
+		Path:     cookiePath,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})

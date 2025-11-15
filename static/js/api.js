@@ -28,6 +28,7 @@ const API = {
         const response = await fetch(`${this.baseURL}${endpoint}`, {
             ...options,
             headers,
+            credentials: 'include', // Always include cookies
         });
         
         if (!response.ok) {
@@ -43,8 +44,12 @@ const API = {
         const data = await this.request('/register', {
             method: 'POST',
             body: JSON.stringify({ username, name, password }),
+            credentials: 'include', // Include cookies
         });
-        this.setToken(data.token);
+        // Token is set in cookie by server, extract from response if present
+        if (data.token) {
+            this.setToken(data.token);
+        }
         return data;
     },
     
@@ -52,8 +57,12 @@ const API = {
         const data = await this.request('/login', {
             method: 'POST',
             body: JSON.stringify({ username, password }),
+            credentials: 'include', // Include cookies
         });
-        this.setToken(data.token);
+        // Token is set in cookie by server, extract from response if present
+        if (data.token) {
+            this.setToken(data.token);
+        }
         return data;
     },
     
