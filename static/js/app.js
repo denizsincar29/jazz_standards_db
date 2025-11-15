@@ -131,9 +131,19 @@ function showMainScreen() {
     document.getElementById('main-screen').classList.remove('hidden');
     document.getElementById('user-name').textContent = currentUser.name;
     
-    // Show admin controls if user is admin
+    // Show/hide admin controls
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(el => {
+        if (currentUser.is_admin) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    });
+    
+    // Load pending standards if admin
     if (currentUser.is_admin) {
-        document.getElementById('admin-controls').classList.remove('hidden');
+        loadPendingStandards();
     }
 }
 
@@ -149,6 +159,8 @@ function switchView(viewName) {
         loadAllStandards();
     } else if (viewName === 'categories') {
         loadCategories();
+    } else if (viewName === 'pending') {
+        loadPendingStandards(1);
     }
 }
 
@@ -183,6 +195,17 @@ async function loadCategories() {
         renderCategories();
     } catch (error) {
         console.error('Failed to load categories:', error);
+    }
+}
+
+async function loadPendingStandards(page = 1) {
+    if (!currentUser || !currentUser.is_admin) return;
+    
+    try {
+        const data = await API.getPendingStandards(page, 100);
+        renderPendingStandards(data);
+    } catch (error) {
+        console.error('Failed to load pending standards:', error);
     }
 }
 
@@ -234,6 +257,16 @@ function renderAllStandards(data) {
     
     container.innerHTML = standards.map(standard => {
         const isKnown = myStandards.some(us => us.jazz_standard_id === standard.id);
+        const isPending = standard.status === 'pending';
+        const isRejected = standard.status === 'rejected';
+        
+        let statusBadge = '';
+        if (isPending) {
+            statusBadge = '<span style="color: #ffc107; font-weight: bold;">⏳ Pending Approval</span>';
+        } else if (isRejected) {
+            statusBadge = '<span style="color: #dc3545; font-weight: bold;">❌ Rejected</span>';
+        }
+        
         const actionBtn = isKnown
             ? `<button class="btn-remove" onclick="removeStandard(${standard.id})">Remove</button>`
             : `<button class="btn-know" onclick="addStandard(${standard.id})">I Know This</button>`;
@@ -241,12 +274,13 @@ function renderAllStandards(data) {
         return `
             <div class="standard-item">
                 <div class="standard-info">
-                    <h4>${standard.title}</h4>
+                    <h4>${standard.title} ${statusBadge}</h4>
                     <p>${standard.composer} - ${standard.style}</p>
                     ${standard.additional_note ? `<p><em>${standard.additional_note}</em></p>` : ''}
+                    ${standard.creator ? `<p style="font-size: 0.85em; color: #aaa;">Submitted by: ${standard.creator.name}</p>` : ''}
                 </div>
                 <div class="standard-actions">
-                    ${actionBtn}
+                    ${!isPending && !isRejected ? actionBtn : ''}
                     ${currentUser.is_admin ? `<button class="btn-remove" onclick="deleteStandard(${standard.id})">Delete</button>` : ''}
                 </div>
             </div>
@@ -270,6 +304,37 @@ function renderPagination(data) {
         <span>Page ${data.page} of ${totalPages}</span>
         <button ${data.page === totalPages ? 'disabled' : ''} onclick="loadAllStandards(${data.page + 1})">Next</button>
     `;
+}
+
+function renderPendingStandards(data) {
+    const container = document.getElementById('pending-standards-list');
+    if (!container) return;
+    
+    const standards = data.standards || [];
+    
+    if (standards.length === 0) {
+        container.innerHTML = '<p style="color: white;">No pending standards.</p>';
+        return;
+    }
+    
+    container.innerHTML = standards.map(standard => `
+        <div class="standard-item pending-item">
+            <div class="standard-info">
+                <h4>${standard.title}</h4>
+                <p>${standard.composer} - ${standard.style}</p>
+                ${standard.additional_note ? `<p><em>${standard.additional_note}</em></p>` : ''}
+                <p style="font-size: 0.85em; color: #aaa;">
+                    Submitted by: ${standard.creator ? standard.creator.name : 'Unknown'} 
+                    on ${new Date(standard.created_at).toLocaleDateString()}
+                </p>
+            </div>
+            <div class="standard-actions">
+                <button class="btn-approve" onclick="approveStandard(${standard.id})">✓ Approve</button>
+                <button class="btn-reject" onclick="rejectStandard(${standard.id})">✗ Reject</button>
+                <button class="btn-remove" onclick="deleteStandard(${standard.id})">Delete</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderCategories() {
@@ -338,10 +403,21 @@ async function handleAddStandard(e) {
     const note = document.getElementById('new-standard-note').value;
     
     try {
-        await API.createStandard(title, composer, style, note);
+        const response = await API.createStandard(title, composer, style, note);
         document.getElementById('add-standard-modal').classList.add('hidden');
         e.target.reset();
+        
+        // Show success message
+        if (response.message) {
+            alert(response.message);
+        }
+        
         await loadAllStandards(currentPage);
+        
+        // If admin, also reload pending standards
+        if (currentUser.is_admin) {
+            loadPendingStandards();
+        }
     } catch (error) {
         alert(error.message);
     }
@@ -402,6 +478,33 @@ function checkOnlineStatus() {
     window.addEventListener('online', updateStatus);
     window.addEventListener('offline', updateStatus);
     updateStatus();
+}
+
+// Admin functions for approving/rejecting standards
+async function approveStandard(id) {
+    if (!confirm('Approve this standard?')) return;
+    
+    try {
+        await API.approveStandard(id);
+        await loadPendingStandards();
+        await loadAllStandards(currentPage);
+        alert('Standard approved successfully!');
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function rejectStandard(id) {
+    if (!confirm('Reject this standard? It will be marked as rejected.')) return;
+    
+    try {
+        await API.rejectStandard(id);
+        await loadPendingStandards();
+        await loadAllStandards(currentPage);
+        alert('Standard rejected.');
+    } catch (error) {
+        alert(error.message);
+    }
 }
 
 // Initialize on load

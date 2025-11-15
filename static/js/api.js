@@ -136,4 +136,18 @@ const API = {
     async deleteCategory(id) {
         return this.request(`/users/me/categories/${id}`, { method: 'DELETE' });
     },
+    
+    // Admin: Pending Standards
+    async getPendingStandards(page = 1, limit = 100) {
+        const params = new URLSearchParams({ page, limit });
+        return this.request(`/jazz_standards/pending?${params}`);
+    },
+    
+    async approveStandard(id) {
+        return this.request(`/jazz_standards/${id}/approve`, { method: 'POST' });
+    },
+    
+    async rejectStandard(id) {
+        return this.request(`/jazz_standards/${id}/reject`, { method: 'POST' });
+    },
 };

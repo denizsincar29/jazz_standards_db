@@ -54,6 +54,7 @@
                 <button class="nav-btn active" data-view="my-standards">My Standards</button>
                 <button class="nav-btn" data-view="all-standards">All Standards</button>
                 <button class="nav-btn" data-view="categories">Categories</button>
+                <button class="nav-btn admin-only hidden" data-view="pending">⏳ Pending Approvals</button>
             </nav>
 
             <!-- My Standards View -->
@@ -87,11 +88,18 @@
                             <option value="free">Free</option>
                         </select>
                     </div>
-                    <div id="admin-controls" class="hidden">
-                        <button id="add-standard-btn">+ Add Standard</button>
-                    </div>
+                    <button id="add-standard-btn">+ Add Standard</button>
                     <div id="all-standards-list"></div>
                     <div id="pagination"></div>
+                </div>
+            </div>
+
+            <!-- Pending Standards View (Admin Only) -->
+            <div id="pending-view" class="view hidden admin-only">
+                <div class="container">
+                    <h2>⏳ Pending Approvals</h2>
+                    <p style="color: #aaa; margin-bottom: 20px;">Review and approve/reject standards submitted by users.</p>
+                    <div id="pending-standards-list"></div>
                 </div>
             </div>
 

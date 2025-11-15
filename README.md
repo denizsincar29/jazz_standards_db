@@ -6,11 +6,13 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 - **Progressive Web App**: Install on mobile/desktop, works offline
 - **User Management**: Secure authentication with bcrypt and tokens
-- **Common Standards Database**: Shared database of jazz standards (admin-only additions)
+- **Common Standards Database**: Shared database of jazz standards
+- **User Submissions**: All authenticated users can submit new standards
+- **Approval Workflow**: Admin must approve user-submitted standards before they appear in the database
 - **Personal Tracking**: Track which standards you know
 - **Categories**: Organize your standards into custom categories
 - **Search & Filter**: Find standards by title, composer, or style
-- **Admin Panel**: Add, edit, and delete standards (admin users only)
+- **Admin Panel**: Approve/reject/delete standards, view pending submissions
 - **Responsive Design**: Works on all devices
 
 ## Technology Stack
@@ -154,17 +156,22 @@ Create first admin user (only works once)
 ### Jazz Standards
 
 #### GET `/api/jazz_standards`
-List all standards with pagination and filters
+List all jazz standards with pagination and filters
+- Regular users: Only see approved standards
+- Admins: Can filter by status (pending, approved, rejected)
 ```
 Query params:
 - page (default: 1)
 - limit (default: 100)
 - search (optional)
 - style (optional)
+- status (optional, admin only): pending, approved, rejected
 ```
 
-#### POST `/api/jazz_standards` (Admin only)
-Create a new jazz standard
+#### POST `/api/jazz_standards` (All authenticated users)
+Submit a new jazz standard
+- **Regular users**: Standard is created with status="pending", requires admin approval
+- **Admins**: Standard is auto-approved with status="approved"
 ```json
 {
   "title": "All the Things You Are",
@@ -173,6 +180,15 @@ Create a new jazz standard
   "additional_note": "From 'Very Warm for May'"
 }
 ```
+
+#### GET `/api/jazz_standards/pending` (Admin only)
+List all pending standards awaiting approval
+
+#### POST `/api/jazz_standards/:id/approve` (Admin only)
+Approve a pending standard
+
+#### POST `/api/jazz_standards/:id/reject` (Admin only)
+Reject a pending standard
 
 #### PUT `/api/jazz_standards/:id` (Admin only)
 Update a jazz standard

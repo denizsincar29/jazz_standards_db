@@ -286,6 +286,29 @@ header h1 {
     background: #2980b9;
 }
 
+.btn-approve {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-approve:hover {
+    background: #229954;
+}
+
+.btn-reject {
+    background: #e67e22;
+    color: white;
+}
+
+.btn-reject:hover {
+    background: #d35400;
+}
+
+.pending-item {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+}
+
 /* Pagination */
 #pagination {
     display: flex;
