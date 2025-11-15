@@ -4,19 +4,17 @@
 
 The default `docker-compose.yml` uses port 8000. To use a different port without modifying the version-controlled file:
 
-### Method 1: Using docker-compose.override.yml (Recommended)
+### Using .env File (Recommended)
 
 1. **Copy the example file:**
    ```bash
-   cp docker-compose.override.yml.example docker-compose.override.yml
+   cp .env.example .env
    ```
 
-2. **Edit docker-compose.override.yml:**
-   ```yaml
-   services:
-     app:
-       ports:
-         - "YOUR_PORT:8000"  # e.g., "8080:8000"
+2. **Edit .env to set your external port:**
+   ```env
+   EXTERNAL_PORT=5251  # Your desired port
+   DB_EXTERNAL_PORT=5432  # PostgreSQL port (optional)
    ```
 
 3. **Start the services:**
@@ -24,24 +22,18 @@ The default `docker-compose.yml` uses port 8000. To use a different port without
    docker-compose up -d
    ```
 
-Docker Compose automatically merges `docker-compose.override.yml` with `docker-compose.yml`. The override file is ignored by git, so your changes won't be affected by `git pull`.
+The `.env` file is gitignored, so your configuration persists across `git pull` and doesn't affect the repository.
 
-### Method 2: Using Environment Variable
+**How it works:**
+- Container internal port stays at 8000 (unchanged)
+- `EXTERNAL_PORT` in `.env` controls what port on your host maps to container's 8000
+- Example: `EXTERNAL_PORT=5251` means access at `http://localhost:5251`
 
-You can also use the `-p` flag:
+### Alternative: Command Line
+
+You can also override the port when starting:
 ```bash
-docker-compose up -d -p 8080:8000
-```
-
-Or set in a `.env` file:
-```env
-EXTERNAL_PORT=8080
-```
-
-Then modify `docker-compose.yml` to use:
-```yaml
-ports:
-  - "${EXTERNAL_PORT:-8000}:8000"
+EXTERNAL_PORT=5251 docker-compose up -d
 ```
 
 ## Apache Reverse Proxy Configuration

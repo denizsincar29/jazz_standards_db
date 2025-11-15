@@ -104,22 +104,24 @@
 
 ## Настройка портов
 
-Для изменения порта без модификации `docker-compose.yml`:
+Для изменения внешнего порта без модификации `docker-compose.yml`:
 
-1. Скопировать пример:
+1. Скопировать `.env.example`:
    ```bash
-   cp docker-compose.override.yml.example docker-compose.override.yml
+   cp .env.example .env
    ```
 
-2. Отредактировать `docker-compose.override.yml`:
-   ```yaml
-   services:
-     app:
-       ports:
-         - "ТВОЙ_ПОРТ:8000"
+2. Отредактировать `.env`:
+   ```env
+   EXTERNAL_PORT=5251  # Твой порт
    ```
 
-3. Файл `docker-compose.override.yml` добавлен в `.gitignore` и не будет затронут при `git pull`
+3. Файл `.env` добавлен в `.gitignore` и не будет затронут при `git pull`
+
+**Как это работает:**
+- Внутренний порт контейнера остаётся 8000
+- `EXTERNAL_PORT` в `.env` контролирует, на каком порту хоста доступно приложение
+- Пример: `EXTERNAL_PORT=5251` означает доступ по `http://localhost:5251`
 
 ## Настройка Apache reverse proxy
 
@@ -135,8 +137,7 @@ ProxyPass /jazzdb http://localhost:8000/
 ProxyPassReverse /jazzdb http://localhost:8000/
 ```
 
-Также нужно установить переменную окружения:
-```yaml
-environment:
-  - BASE_PATH=/jazzdb
+Также нужно установить переменную окружения в `.env`:
+```env
+BASE_PATH=/jazzdb
 ```

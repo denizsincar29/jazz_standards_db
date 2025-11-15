@@ -4,9 +4,6 @@
 __pycache__/
 postgres_data/
 
-# Docker override for local customization
-docker-compose.override.yml
-
 # Go
 jazz_standards_db
 *.exe
