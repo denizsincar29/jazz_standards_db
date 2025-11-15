@@ -427,12 +427,19 @@ Quick example for subpath deployment:
    ProxyPassReverse /jazzdb http://localhost:8000/
    ```
 
-2. **Set BASE_PATH in .env:**
-   ```env
-   BASE_PATH=/jazzdb
+2. **Configure Apache (Important - read the comments!):**
+   ```apache
+   # The trailing slash after /jazzdb/ is REQUIRED
+   # This tells Apache to strip /jazzdb from URLs before forwarding
+   
+   RewriteEngine on
+   RewriteRule ^/jazzdb$ /jazzdb/ [R=301,L]
+   
+   ProxyPass /jazzdb/ http://localhost:8000/
+   ProxyPassReverse /jazzdb/ http://localhost:8000/
    ```
 
-The application automatically handles subpath routing based on the BASE_PATH environment variable.
+The Go application doesn't need to know about the subpath - Apache strips it automatically. See `docs/DEPLOYMENT.md` for complete configuration examples.
 
 ### Production Checklist
 

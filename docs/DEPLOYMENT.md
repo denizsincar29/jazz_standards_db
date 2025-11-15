@@ -90,77 +90,56 @@ If you want to access the app at `http://yourdomain.com/`:
 
 If you want to access the app at `http://yourdomain.com/jazzdb/`:
 
-**1. Apache Configuration:**
+**Important:** The Go application always runs at root internally. Apache strips the base path before forwarding requests to the app. This is the standard reverse proxy pattern and avoids routing complexity.
+
+**Apache Configuration:**
 
 ```apache
 <VirtualHost *:80>
     ServerName yourdomain.com
 
-    # Serve static files directly (optional, for better performance)
-    Alias /jazzdb/static /path/to/jazz_standards_db/static
-    <Directory /path/to/jazz_standards_db/static>
-        Require all granted
-    </Directory>
+    # IMPORTANT: The trailing slash after /jazzdb/ and :8000/ is required
+    # This tells Apache to strip /jazzdb from the URL before forwarding
+    # Example: yourdomain.com/jazzdb/api/users -> localhost:8000/api/users
 
-    # Proxy API and app requests
     ProxyPreserveHost On
-    ProxyPass /jazzdb/static !
-    ProxyPass /jazzdb http://localhost:8000/
-    ProxyPassReverse /jazzdb http://localhost:8000/
+    
+    # Redirect /jazzdb to /jazzdb/ (required for proper path handling)
+    RewriteEngine on
+    RewriteRule ^/jazzdb$ /jazzdb/ [R=301,L]
+    
+    # Strip /jazzdb and forward to app at root
+    ProxyPass /jazzdb/ http://localhost:8000/
+    ProxyPassReverse /jazzdb/ http://localhost:8000/
 
     # WebSocket support (if needed)
-    RewriteEngine on
     RewriteCond %{HTTP:Upgrade} websocket [NC]
     RewriteCond %{HTTP:Connection} upgrade [NC]
     RewriteRule ^/jazzdb/?(.*) "ws://localhost:8000/$1" [P,L]
 </VirtualHost>
 ```
 
-**2. Application Configuration:**
+**Key Points:**
 
-Set the base path via environment variable in `.env`:
+1. **Trailing slashes matter:** `ProxyPass /jazzdb/ http://localhost:8000/` strips `/jazzdb` from requests
+2. **Redirect rule:** Ensures `/jazzdb` (without slash) redirects to `/jazzdb/` (with slash)
+3. **No app changes needed:** The Go app doesn't need to know about `/jazzdb` at all
+4. **BASE_PATH in .env:** Optional - not used by the app for routing, kept for reference only
 
-```env
-BASE_PATH=/jazzdb
+**How it works:**
+
+```
+User visits:        yourdomain.com/jazzdb/
+Apache forwards:    localhost:8000/
+
+User visits:        yourdomain.com/jazzdb/api/users
+Apache forwards:    localhost:8000/api/users
+
+User visits:        yourdomain.com/jazzdb
+Apache redirects:   yourdomain.com/jazzdb/ (301)
 ```
 
-Or in `docker-compose.yml`:
-
-```yaml
-services:
-  app:
-    environment:
-      - BASE_PATH=/jazzdb
-```
-
-The application will automatically handle the base path routing. No code changes needed.
-
-**3. Update PWA manifest paths:**
-
-In `static/manifest.json`:
-```json
-{
-  "start_url": "/jazzdb/",
-  "scope": "/jazzdb/"
-}
-```
-
-In `static/sw.js`, update cache paths:
-```javascript
-const ASSETS_TO_CACHE = [
-    '/jazzdb/',
-    '/jazzdb/static/css/styles.css',
-    // ... etc
-];
-```
-
-In `static/js/api.js`, update base URL:
-```javascript
-const API = {
-    baseURL: '/jazzdb/api',
-    // ... rest
-};
-```
+The frontend uses relative URLs, so it automatically works at any path.
 
 ### HTTPS Configuration (Recommended for Production)
 

@@ -152,19 +152,28 @@ if [ -z "$BASE_PATH" ]; then
 EOF
 else
     # Subpath configuration
+    # Apache strips the base path before forwarding to the app
     cat >> $PROXY_FILE <<EOF
 # Subpath deployment (http://yourdomain.com$BASE_PATH/)
+# Apache strips "$BASE_PATH" from the URL before forwarding to the app
 
 <VirtualHost *:80>
     ServerName yourdomain.com
 
-    # Proxy to application
+    # IMPORTANT: ProxyPass with trailing slash strips the base path
+    # Example: yourdomain.com$BASE_PATH/api/users -> localhost:$EXTERNAL_PORT/api/users
+    
     ProxyPreserveHost On
-    ProxyPass $BASE_PATH http://localhost:$EXTERNAL_PORT/
-    ProxyPassReverse $BASE_PATH http://localhost:$EXTERNAL_PORT/
+    
+    # Redirect /jazz to /jazz/ (required for proper path handling)
+    RewriteEngine on
+    RewriteRule ^$BASE_PATH\$ $BASE_PATH/ [R=301,L]
+    
+    # Strip base path and forward to app at root
+    ProxyPass $BASE_PATH/ http://localhost:$EXTERNAL_PORT/
+    ProxyPassReverse $BASE_PATH/ http://localhost:$EXTERNAL_PORT/
 
     # WebSocket support
-    RewriteEngine on
     RewriteCond %{HTTP:Upgrade} websocket [NC]
     RewriteCond %{HTTP:Connection} upgrade [NC]
     RewriteRule ^$BASE_PATH/?(.*) "ws://localhost:$EXTERNAL_PORT/\$1" [P,L]
@@ -175,8 +184,9 @@ else
     Header always set X-XSS-Protection "1; mode=block"
 </VirtualHost>
 
-# Note: You've configured BASE_PATH=$BASE_PATH
-# Make sure this matches in your .env file
+# Note: You've configured BASE_PATH=$BASE_PATH in .env
+# The Go app doesn't need to know about this path - Apache handles the stripping.
+# Access your app at: http://yourdomain.com$BASE_PATH/
 
 # For HTTPS (recommended for production):
 # <VirtualHost *:443>
@@ -187,8 +197,13 @@ else
 #     SSLCertificateKeyFile /path/to/key.pem
 #     
 #     ProxyPreserveHost On
-#     ProxyPass $BASE_PATH http://localhost:$EXTERNAL_PORT/
-#     ProxyPassReverse $BASE_PATH http://localhost:$EXTERNAL_PORT/
+#     
+#     # Redirect /jazz to /jazz/
+#     RewriteEngine on
+#     RewriteRule ^$BASE_PATH\$ $BASE_PATH/ [R=301,L]
+#     
+#     ProxyPass $BASE_PATH/ http://localhost:$EXTERNAL_PORT/
+#     ProxyPassReverse $BASE_PATH/ http://localhost:$EXTERNAL_PORT/
 #     
 #     # Add security headers
 #     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"

@@ -86,17 +86,18 @@ func main() {
 		})
 	}
 
-	// Apply base path if configured (for reverse proxy subpath deployments)
-	var handler http.Handler = r
-	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
-		log.Printf("Using base path: %s", config.AppConfig.BasePath)
-		mainRouter := mux.NewRouter()
-		mainRouter.PathPrefix(config.AppConfig.BasePath).Handler(http.StripPrefix(config.AppConfig.BasePath, r))
-		handler = mainRouter
-	}
+	// Note: BASE_PATH is not used in the application routing.
+	// For reverse proxy subpath deployments (e.g., /jazz), Apache should strip the path:
+	//   ProxyPass /jazz http://localhost:8000/
+	// This way the Go app always sees requests at root, and no special handling is needed.
+	// The BASE_PATH config can be removed or used only for generating URLs if needed.
 
 	// Start server
 	port := ":" + config.AppConfig.Port
 	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(port, handler))
+	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
+		log.Printf("Note: BASE_PATH '%s' is set but not used by the application", config.AppConfig.BasePath)
+		log.Printf("Configure Apache to strip the path: ProxyPass %s http://localhost:%s/", config.AppConfig.BasePath, config.AppConfig.Port)
+	}
+	log.Fatal(http.ListenAndServe(port, r))
 }
