@@ -1,39 +1,46 @@
 # Deployment Guide
 
-## Custom Port Configuration
+## Interactive Setup
 
-The default `docker-compose.yml` uses port 8000. To use a different port without modifying the version-controlled file:
+The easiest way to configure the application is using the interactive setup script:
 
-### Using .env File (Recommended)
-
-1. **Copy the example file:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Edit .env to set your external port:**
-   ```env
-   EXTERNAL_PORT=5251  # Your desired port
-   DB_EXTERNAL_PORT=5432  # PostgreSQL port (optional)
-   ```
-
-3. **Start the services:**
-   ```bash
-   docker-compose up -d
-   ```
-
-The `.env` file is gitignored, so your configuration persists across `git pull` and doesn't affect the repository.
-
-**How it works:**
-- Container internal port stays at 8000 (unchanged)
-- `EXTERNAL_PORT` in `.env` controls what port on your host maps to container's 8000
-- Example: `EXTERNAL_PORT=5251` means access at `http://localhost:5251`
-
-### Alternative: Command Line
-
-You can also override the port when starting:
 ```bash
-EXTERNAL_PORT=5251 docker-compose up -d
+./build.sh
+```
+
+This will:
+1. Create `.env` file with your configuration
+2. Ask for external port, database credentials, JWT secret
+3. Ask for base path (for subpath deployments)
+4. Optionally create a systemd service
+5. Generate Apache proxy configuration in `proxy.txt`
+
+The script automatically detects:
+- Current directory for installation
+- Current user and group for systemd service
+- Generates secure JWT secret if not provided
+
+### Manual Configuration
+
+If you prefer manual setup, create a `.env` file:
+
+```env
+# External port
+EXTERNAL_PORT=8000
+
+# Database
+DB_USER=jazz
+DB_PASSWORD=jazz
+DB_NAME=jazz
+
+# Base path (empty for root, /jazzdb for subpath)
+BASE_PATH=
+
+# JWT secret (generate with: openssl rand -base64 32)
+JWT_SECRET=your-secret-here
+
+# Environment
+ENVIRONMENT=production
 ```
 
 ## Apache Reverse Proxy Configuration

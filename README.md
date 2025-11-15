@@ -23,7 +23,7 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 ## Quick Start
 
-### Using Docker (Recommended)
+### Using Interactive Setup (Recommended)
 
 1. **Clone the repository**
    ```bash
@@ -31,13 +31,16 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    cd jazz_standards_db
    ```
 
-2. **(Optional) Customize the port**
-   
-   To use a different port:
+2. **Run the interactive setup**
    ```bash
-   cp .env.example .env
-   # Edit .env and set EXTERNAL_PORT=5251 (or your desired port)
+   ./build.sh
    ```
+   
+   This will:
+   - Create `.env` configuration file
+   - Ask for external port, base path, and other settings
+   - Optionally create a systemd service
+   - Generate Apache proxy configuration in `proxy.txt`
 
 3. **Start with Docker Compose**
    ```bash
@@ -45,7 +48,7 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    ```
 
 4. **Access the application**
-   - Open http://localhost:8000 in your browser (or your custom port from `.env`)
+   - Open http://localhost:8000 in your browser (or your custom port)
    - Create the first admin account via API:
      ```bash
      curl -X POST http://localhost:8000/api/admin \
@@ -77,8 +80,8 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 3. **Configure environment**
    ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
+   ./build.sh  # Interactive setup
+   # Or manually create .env file with your settings
    ```
 
 4. **Run the application**
@@ -339,23 +342,23 @@ ENVIRONMENT=development
 
 ## Deployment
 
-### Custom Port Configuration
+### Configuration
 
-To change the external port without modifying version-controlled files:
+Use the interactive setup script:
 
-1. Copy the .env template:
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+./build.sh
+```
 
-2. Edit `.env` to set your external port:
-   ```env
-   EXTERNAL_PORT=5251  # Your desired port
-   ```
+This will guide you through:
+- External port configuration
+- Base path for subpath deployments
+- Database credentials
+- JWT secret generation
+- Systemd service creation
+- Apache proxy configuration
 
-3. The `.env` file is gitignored and won't be affected by `git pull`
-
-The container's internal port stays at 8000, but you can access it from your custom port.
+The `.env` file is gitignored and won't be affected by `git pull`.
 
 ### Apache Reverse Proxy
 

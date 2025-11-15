@@ -221,7 +221,7 @@ Deletes a category (sets standards to no category)
 ├── main.go                 # Entry point
 ├── go.mod
 ├── go.sum
-├── .env.example
+├── build.sh             # Interactive setup script
 ├── README.md
 ├── IMPLEMENTATION_SPEC.md
 ├── docker-compose.yml
