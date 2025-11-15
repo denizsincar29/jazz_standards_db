@@ -25,11 +25,50 @@ func main() {
 	}
 	defer database.Close()
 
+	// Get base path from config (e.g., "/jazz" for subpath deployment)
+	basePath := config.AppConfig.BasePath
+	if basePath != "" && basePath != "/" {
+		// Normalize base path: ensure it starts with / and doesn't end with /
+		if basePath[0] != '/' {
+			basePath = "/" + basePath
+		}
+		if basePath[len(basePath)-1] == '/' {
+			basePath = basePath[:len(basePath)-1]
+		}
+	} else {
+		basePath = ""
+	}
+
 	// Create router
 	r := mux.NewRouter()
 
-	// API routes
-	api := r.PathPrefix("/api").Subrouter()
+	// Register routes with or without base path
+	registerRoutes(r, basePath)
+
+	// Start server
+	port := ":" + config.AppConfig.Port
+	if basePath != "" {
+		log.Printf("Server starting on port %s at base path %s", config.AppConfig.Port, basePath)
+		log.Printf("Configure Apache: ProxyPass %s/ http://localhost:%s%s/", basePath, config.AppConfig.Port, basePath)
+	} else {
+		log.Printf("Server starting on port %s", config.AppConfig.Port)
+	}
+	log.Fatal(http.ListenAndServe(port, r))
+}
+
+func registerRoutes(r *mux.Router, basePath string) {
+	staticDir := "./static"
+
+	// Helper function to add base path to route
+	route := func(path string) string {
+		if basePath == "" {
+			return path
+		}
+		return basePath + path
+	}
+
+	// API routes - all under /api
+	api := r.PathPrefix(route("/api")).Subrouter()
 
 	// Auth routes (public)
 	api.HandleFunc("/register", handlers.Register).Methods("POST")
@@ -65,55 +104,57 @@ func main() {
 	api.HandleFunc("/users/me/categories/{id:[0-9]+}", middleware.RequireAuth(handlers.DeleteCategory)).Methods("DELETE")
 
 	// Serve static files (PWA)
-	staticDir := "./static"
 	if _, err := os.Stat(staticDir); err == nil {
-		// Serve service worker (must be at root for PWA)
-		r.HandleFunc("/sw.js", func(w http.ResponseWriter, r *http.Request) {
+		// Serve service worker (must be accessible at base path for PWA)
+		r.HandleFunc(route("/sw.js"), func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/javascript")
 			http.ServeFile(w, r, filepath.Join(staticDir, "sw.js"))
 		})
-		
+
 		// Serve manifest.json
-		r.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) {
+		r.HandleFunc(route("/manifest.json"), func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/manifest+json")
 			http.ServeFile(w, r, filepath.Join(staticDir, "manifest.json"))
 		})
-		
+
 		// Serve static files (CSS, JS, images)
-		// Create a file server for the static directory
 		staticFileServer := http.FileServer(http.Dir(staticDir))
-		r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", staticFileServer))
-		
+		if basePath != "" {
+			r.PathPrefix(route("/static/")).Handler(http.StripPrefix(basePath+"/static/", staticFileServer))
+		} else {
+			r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", staticFileServer))
+		}
+
 		// Catch-all: Serve index.html for root and any unmatched routes (SPA support)
-		// This must be registered LAST to allow other routes to match first
-		r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Only serve index.html if the path doesn't start with /api
-			// and doesn't point to an actual file
-			if r.URL.Path != "/" && r.URL.Path != "" {
-				// Check if file exists
+		// Handle both exact base path and with trailing slash
+		if basePath != "" {
+			r.HandleFunc(basePath, handlers.ServeIndexHTML)
+			r.HandleFunc(basePath+"/", handlers.ServeIndexHTML)
+			// SPA catch-all for any unmatched routes under base path
+			r.PathPrefix(basePath + "/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Check if it's an existing file
+				relativePath := r.URL.Path[len(basePath):]
+				filePath := filepath.Join(staticDir, relativePath)
+				if _, err := os.Stat(filePath); err == nil {
+					http.ServeFile(w, r, filePath)
+					return
+				}
+				// Default to index.html for SPA routing
+				handlers.ServeIndexHTML(w, r)
+			})
+		} else {
+			r.HandleFunc("/", handlers.ServeIndexHTML)
+			// SPA catch-all for any unmatched routes at root
+			r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Check if it's an existing file
 				filePath := filepath.Join(staticDir, r.URL.Path)
 				if _, err := os.Stat(filePath); err == nil {
 					http.ServeFile(w, r, filePath)
 					return
 				}
-			}
-			// Default to index.html for SPA routing with BASE_PATH injection
-			handlers.ServeIndexHTML(w, r)
-		})
+				// Default to index.html for SPA routing
+				handlers.ServeIndexHTML(w, r)
+			})
+		}
 	}
-
-	// Note: BASE_PATH is not used in the application routing.
-	// For reverse proxy subpath deployments (e.g., /jazz), Apache should strip the path:
-	//   ProxyPass /jazz http://localhost:8000/
-	// This way the Go app always sees requests at root, and no special handling is needed.
-	// The BASE_PATH config can be removed or used only for generating URLs if needed.
-
-	// Start server
-	port := ":" + config.AppConfig.Port
-	log.Printf("Server starting on port %s", port)
-	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
-		log.Printf("Note: BASE_PATH '%s' is set but not used by the application", config.AppConfig.BasePath)
-		log.Printf("Configure Apache to strip the path: ProxyPass %s http://localhost:%s/", config.AppConfig.BasePath, config.AppConfig.Port)
-	}
-	log.Fatal(http.ListenAndServe(port, r))
 }

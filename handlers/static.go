@@ -28,15 +28,15 @@ func ServeIndexHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get base path from X-Forwarded-Prefix header (set by Apache)
-	// or from environment variable
-	basePath := r.Header.Get("X-Forwarded-Prefix")
-	if basePath == "" {
-		basePath = os.Getenv("BASE_PATH")
-	}
+	// Get base path from environment variable
+	basePath := os.Getenv("BASE_PATH")
 	
-	// Ensure base path ends with / for proper relative URL resolution
+	// Normalize base path to end with / for proper relative URL resolution
 	if basePath != "" && basePath != "/" {
+		// Ensure it starts with / and ends with /
+		if basePath[0] != '/' {
+			basePath = "/" + basePath
+		}
 		if !strings.HasSuffix(basePath, "/") {
 			basePath += "/"
 		}

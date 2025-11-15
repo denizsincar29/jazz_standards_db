@@ -194,16 +194,16 @@ if [ -z "$BASE_PATH" ]; then
 EOF
 else
     # Subpath configuration
-    # Apache strips the base path before forwarding to the app
+    # Apache forwards to the app WITH the base path (does NOT strip it)
     cat >> $PROXY_FILE <<EOF
 # Subpath deployment (http://yourdomain.com$BASE_PATH/)
-# Apache strips "$BASE_PATH" from the URL before forwarding to the app
+# Apache forwards to app WITH base path: yourdomain.com$BASE_PATH/ -> localhost:$SERVER_PORT$BASE_PATH/
 
 <VirtualHost *:80>
     ServerName yourdomain.com
 
-    # IMPORTANT: ProxyPass with trailing slash strips the base path
-    # Example: yourdomain.com$BASE_PATH/api/users -> localhost:$SERVER_PORT/api/users
+    # IMPORTANT: ProxyPass includes base path - app serves at this path
+    # Example: yourdomain.com$BASE_PATH/api/users -> localhost:$SERVER_PORT$BASE_PATH/api/users
     
     ProxyPreserveHost On
     
@@ -211,16 +211,14 @@ else
     RewriteEngine on
     RewriteRule ^$BASE_PATH\$ $BASE_PATH/ [R=301,L]
     
-    # Strip base path and forward to app at root
-    # Add X-Forwarded-Prefix header so app knows the original base path
-    RequestHeader set X-Forwarded-Prefix "$BASE_PATH/"
-    ProxyPass $BASE_PATH/ http://localhost:$SERVER_PORT/
-    ProxyPassReverse $BASE_PATH/ http://localhost:$SERVER_PORT/
+    # Forward to app WITH base path (app handles routing at this path)
+    ProxyPass $BASE_PATH/ http://localhost:$SERVER_PORT$BASE_PATH/
+    ProxyPassReverse $BASE_PATH/ http://localhost:$SERVER_PORT$BASE_PATH/
 
     # WebSocket support
     RewriteCond %{HTTP:Upgrade} websocket [NC]
     RewriteCond %{HTTP:Connection} upgrade [NC]
-    RewriteRule ^$BASE_PATH/?(.*) "ws://localhost:$SERVER_PORT/\$1" [P,L]
+    RewriteRule ^$BASE_PATH/?(.*) "ws://localhost:$SERVER_PORT$BASE_PATH/\$1" [P,L]
 
     # Security headers
     Header always set X-Content-Type-Options "nosniff"
@@ -229,8 +227,8 @@ else
 </VirtualHost>
 
 # Note: You've configured BASE_PATH=$BASE_PATH in .env
-# Apache strips the base path and passes X-Forwarded-Prefix header to the app.
-# The app uses this header to serve correct static file paths.
+# The Go app serves all routes at $BASE_PATH (e.g., $BASE_PATH/api/..., $BASE_PATH/static/...)
+# Apache forwards requests WITH the base path intact.
 # Access your app at: http://yourdomain.com$BASE_PATH/
 
 # For HTTPS (recommended for production):
@@ -247,10 +245,10 @@ else
 #     RewriteEngine on
 #     RewriteRule ^$BASE_PATH\$ $BASE_PATH/ [R=301,L]
 #     
-#     # Forward with X-Forwarded-Prefix header
+#     # Forward WITH base path
 #     RequestHeader set X-Forwarded-Prefix "$BASE_PATH/"
-#     ProxyPass $BASE_PATH/ http://localhost:$SERVER_PORT/
-#     ProxyPassReverse $BASE_PATH/ http://localhost:$SERVER_PORT/
+#     ProxyPass $BASE_PATH/ http://localhost:$SERVER_PORT$BASE_PATH/
+#     ProxyPassReverse $BASE_PATH/ http://localhost:$SERVER_PORT$BASE_PATH/
 #     
 #     # Add security headers
 #     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
