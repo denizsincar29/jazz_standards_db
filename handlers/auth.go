@@ -8,6 +8,7 @@ import (
 	"github.com/denizsincar29/jazz_standards_db/database"
 	"github.com/denizsincar29/jazz_standards_db/models"
 	"github.com/denizsincar29/jazz_standards_db/utils"
+	"gorm.io/gorm"
 )
 
 type RegisterRequest struct {
@@ -149,14 +150,6 @@ func CreateAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if any users exist
-	var count int64
-	database.DB.Model(&models.User{}).Count(&count)
-	if count > 0 {
-		utils.RespondError(w, http.StatusForbidden, "Admin already exists")
-		return
-	}
-
 	// Validate input
 	if req.Username == "" || req.Name == "" || req.Password == "" {
 		utils.RespondError(w, http.StatusBadRequest, "Username, name, and password are required")
@@ -177,17 +170,36 @@ func CreateAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create admin user
-	user := models.User{
-		Username:     req.Username,
-		Name:         req.Name,
-		PasswordHash: hashedPassword,
-		IsAdmin:      true,
-		Token:        &token,
-	}
+	// Create admin user - use a transaction to ensure atomicity
+	var user models.User
+	err = database.DB.Transaction(func(tx *gorm.DB) error {
+		// Check if any users exist within the transaction
+		var count int64
+		if err := tx.Model(&models.User{}).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return gorm.ErrRecordNotFound // Use this error to indicate admin already exists
+		}
 
-	if err := database.DB.Create(&user).Error; err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to create admin")
+		// Create admin user
+		user = models.User{
+			Username:     req.Username,
+			Name:         req.Name,
+			PasswordHash: hashedPassword,
+			IsAdmin:      true,
+			Token:        &token,
+		}
+
+		return tx.Create(&user).Error
+	})
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			utils.RespondError(w, http.StatusForbidden, "Admin already exists")
+		} else {
+			utils.RespondError(w, http.StatusInternalServerError, "Failed to create admin")
+		}
 		return
 	}
 

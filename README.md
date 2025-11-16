@@ -51,6 +51,8 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 4. **Create the first admin account**
    
+   **Option A: Using the API endpoint (recommended for automation)**
+   
    The first admin must be created via the special `/api/admin` endpoint (only works when no admins exist):
    
    ```bash
@@ -67,6 +69,20 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
    ```
    
    The response will include your token. Save it or login again through the web UI.
+   
+   **Option B: Using the command-line tool (recommended for interactive setup)**
+   
+   Build and run the admin creation tool:
+   ```bash
+   go build -o create_admin cmd/create_admin/main.go
+   ./create_admin
+   ```
+   
+   The tool will:
+   - Read database configuration from `.env` or environment variables
+   - Prompt for username, display name, and password interactively
+   - Create or update the admin user in the database
+   - Passwords are hidden during input for security
 
 5. **Access the application**
    - Open http://localhost:8000 in your browser (or your configured external port)
