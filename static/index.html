@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Jazz Standards DB</title>
+    <!-- BASE_PATH will be injected here by the server -->
+    <base href="{{BASE_PATH}}">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Login/Register Screen -->
+        <div id="auth-screen" class="screen">
+            <div class="container">
+                <h1>🎷 Jazz Standards DB</h1>
+                <div class="tabs">
+                    <button class="tab active" data-tab="login">Login</button>
+                    <button class="tab" data-tab="register">Register</button>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="login-form" class="auth-form active">
+                    <input type="text" id="login-username" placeholder="Username" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                    <p class="error" id="login-error"></p>
+                </form>
+                
+                <!-- Register Form -->
+                <form id="register-form" class="auth-form">
+                    <input type="text" id="register-name" placeholder="Full Name" required>
+                    <input type="text" id="register-username" placeholder="Username" required>
+                    <input type="password" id="register-password" placeholder="Password" required>
+                    <button type="submit">Register</button>
+                    <p class="error" id="register-error"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="main-screen" class="screen hidden">
+            <!-- Header -->
+            <header>
+                <h1>🎷 Jazz Standards DB</h1>
+                <div class="user-info">
+                    <span id="user-name"></span>
+                    <button id="logout-btn">Logout</button>
+                </div>
+            </header>
+
+            <!-- Navigation -->
+            <nav class="main-nav">
+                <button class="nav-btn active" data-view="my-standards">My Standards</button>
+                <button class="nav-btn" data-view="all-standards">All Standards</button>
+                <button class="nav-btn" data-view="categories">Categories</button>
+                <button class="nav-btn admin-only hidden" data-view="pending">⏳ Pending Approvals</button>
+            </nav>
+
+            <!-- My Standards View -->
+            <div id="my-standards-view" class="view active">
+                <div class="container">
+                    <h2>My Standards</h2>
+                    <div id="standards-by-category"></div>
+                </div>
+            </div>
+
+            <!-- All Standards View -->
+            <div id="all-standards-view" class="view hidden">
+                <div class="container">
+                    <h2>All Standards</h2>
+                    <div class="search-controls">
+                        <input type="text" id="search-input" placeholder="Search standards...">
+                        <select id="style-filter">
+                            <option value="">All Styles</option>
+                            <option value="swing">Swing</option>
+                            <option value="bebop">Bebop</option>
+                            <option value="bossa_nova">Bossa Nova</option>
+                            <option value="latin">Latin</option>
+                            <option value="modal">Modal</option>
+                            <option value="waltz">Waltz</option>
+                            <option value="fusion">Fusion</option>
+                            <option value="dixieland">Dixieland</option>
+                            <option value="ragtime">Ragtime</option>
+                            <option value="big_band">Big Band</option>
+                            <option value="samba">Samba</option>
+                            <option value="latin_swing">Latin Swing</option>
+                            <option value="free">Free</option>
+                        </select>
+                    </div>
+                    <button id="add-standard-btn">+ Add Standard</button>
+                    <div id="all-standards-list"></div>
+                    <div id="pagination"></div>
+                </div>
+            </div>
+
+            <!-- Pending Standards View (Admin Only) -->
+            <div id="pending-view" class="view hidden admin-only">
+                <div class="container">
+                    <h2>⏳ Pending Approvals</h2>
+                    <p style="color: #aaa; margin-bottom: 20px;">Review and approve/reject standards submitted by users.</p>
+                    <div id="pending-standards-list"></div>
+                </div>
+            </div>
+
+            <!-- Categories View -->
+            <div id="categories-view" class="view hidden">
+                <div class="container">
+                    <h2>My Categories</h2>
+                    <button id="add-category-btn">+ Add Category</button>
+                    <div id="categories-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="add-standard-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Add Jazz Standard</h3>
+                <form id="add-standard-form">
+                    <input type="text" id="new-standard-title" placeholder="Title" required>
+                    <input type="text" id="new-standard-composer" placeholder="Composer" required>
+                    <textarea id="new-standard-note" placeholder="Additional Note (optional)"></textarea>
+                    <select id="new-standard-style" required>
+                        <option value="">Select Style</option>
+                        <option value="swing">Swing</option>
+                        <option value="bebop">Bebop</option>
+                        <option value="bossa_nova">Bossa Nova</option>
+                        <option value="latin">Latin</option>
+                        <option value="modal">Modal</option>
+                        <option value="waltz">Waltz</option>
+                        <option value="fusion">Fusion</option>
+                        <option value="dixieland">Dixieland</option>
+                        <option value="ragtime">Ragtime</option>
+                        <option value="big_band">Big Band</option>
+                        <option value="samba">Samba</option>
+                        <option value="latin_swing">Latin Swing</option>
+                        <option value="free">Free</option>
+                    </select>
+                    <div class="modal-buttons">
+                        <button type="submit">Add</button>
+                        <button type="button" class="cancel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="add-category-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Add Category</h3>
+                <form id="add-category-form">
+                    <input type="text" id="new-category-name" placeholder="Category Name" required>
+                    <input type="color" id="new-category-color" value="#4a90e2">
+                    <div class="modal-buttons">
+                        <button type="submit">Add</button>
+                        <button type="button" class="cancel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="offline-indicator" class="hidden">Offline</div>
+
+    <script src="static/js/api.js"></script>
+    <script src="static/js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.log('Service Worker registration failed', err));
+        }
+    </script>
+</body>
+</html>

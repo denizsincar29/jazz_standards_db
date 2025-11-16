@@ -3,3 +3,19 @@
 *.log
 __pycache__/
 postgres_data/
+
+# Go
+jazz_standards_db
+*.exe
+*.dll
+*.so
+*.dylib
+vendor/
+
+# Test binaries
+*.test
+*.out
+
+# Build artifacts
+dist/
+build/

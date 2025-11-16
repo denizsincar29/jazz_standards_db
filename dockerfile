@@ -1,26 +1,34 @@
-FROM python:3.12-slim
+# Build stage
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Install ca-certificates for go mod download
+RUN apk add --no-cache ca-certificates git
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Copy application code to the container
+# Copy source code
 COPY . .
+
+# Build the application (static binary)
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-w -s" -o jazz_standards_db .
+
+# Runtime stage - use scratch for smallest image
+FROM scratch
+
+WORKDIR /app
+
+# Copy the static binary
+COPY --from=builder /app/jazz_standards_db .
+
+# Copy static files
+COPY --from=builder /app/static ./static
 
 # Expose the port
 EXPOSE 8000
 
-RUN chmod +x postgrest.sh 
-
 # Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-#CMD ["./postgrest.sh"]
-# postgrest.sh is a debugging script that checks db connection.
-# It's saved because it's useful for debugging purposes.
+CMD ["./jazz_standards_db"]
