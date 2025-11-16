@@ -51,22 +51,17 @@ A Progressive Web App (PWA) for tracking and managing your jazz standards repert
 
 4. **Create the first admin account**
    
-   The first admin must be created via the special `/api/admin` endpoint (only works when no admins exist):
-   
+   Build and run the admin creation tool:
    ```bash
-   curl -X POST http://localhost:8000/api/admin \
-     -H "Content-Type: application/json" \
-     -d '{"username":"admin","name":"Admin User","password":"your-secure-password"}'
+   go build -o create_admin cmd/create_admin/main.go
+   ./create_admin
    ```
    
-   **Note:** If deployed at a subpath (e.g., `/jazz`), use:
-   ```bash
-   curl -X POST http://localhost:8000/jazz/api/admin \
-     -H "Content-Type: application/json" \
-     -d '{"username":"admin","name":"Admin User","password":"your-secure-password"}'
-   ```
-   
-   The response will include your token. Save it or login again through the web UI.
+   The tool will:
+   - Read database configuration from `.env` or environment variables
+   - Prompt for username, display name, and password interactively
+   - Create or update the admin user in the database
+   - Passwords are hidden during input for security
 
 5. **Access the application**
    - Open http://localhost:8000 in your browser (or your configured external port)
@@ -155,16 +150,6 @@ Login and receive authentication token
 {
   "username": "jazzfan",
   "password": "securepassword"
-}
-```
-
-#### POST `/api/admin`
-Create first admin user (only works once)
-```json
-{
-  "username": "admin",
-  "name": "Admin User",
-  "password": "adminpassword"
 }
 ```
 

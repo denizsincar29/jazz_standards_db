@@ -141,59 +141,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	utils.RespondJSON(w, http.StatusOK, user)
 }
 
-// CreateAdmin creates the first admin user (only works if no users exist)
-func CreateAdmin(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// Check if any users exist
-	var count int64
-	database.DB.Model(&models.User{}).Count(&count)
-	if count > 0 {
-		utils.RespondError(w, http.StatusForbidden, "Admin already exists")
-		return
-	}
-
-	// Validate input
-	if req.Username == "" || req.Name == "" || req.Password == "" {
-		utils.RespondError(w, http.StatusBadRequest, "Username, name, and password are required")
-		return
-	}
-
-	// Hash password
-	hashedPassword, err := utils.HashPassword(req.Password)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to process password")
-		return
-	}
-
-	// Generate token
-	token, err := utils.GenerateToken(32)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to generate token")
-		return
-	}
-
-	// Create admin user
-	user := models.User{
-		Username:     req.Username,
-		Name:         req.Name,
-		PasswordHash: hashedPassword,
-		IsAdmin:      true,
-		Token:        &token,
-	}
-
-	if err := database.DB.Create(&user).Error; err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to create admin")
-		return
-	}
-
-	utils.RespondJSON(w, http.StatusCreated, user)
-}
-
 // Logout clears the user's token
 func Logout(w http.ResponseWriter, r *http.Request) {
 	// Clear cookie

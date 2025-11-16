@@ -1,6 +1,25 @@
+// Debug mode - set to true to enable console logging
+window.DEBUG = false;
+
+// Debug print function
+function debugPrint(...args) {
+    if (window.DEBUG) {
+        console.log('[DEBUG]', ...args);
+    }
+}
+
 // API helper functions
 const API = {
-    baseURL: '/api',
+    baseURL: (() => {
+        // Get base path from the <base> tag
+        const baseElement = document.querySelector('base');
+        const basePath = baseElement ? baseElement.getAttribute('href') : '/';
+        // Remove trailing slash and add /api
+        const normalizedBase = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+        const apiBase = normalizedBase + '/api';
+        debugPrint('API baseURL initialized:', apiBase);
+        return apiBase;
+    })(),
     
     getToken() {
         return localStorage.getItem('token');
@@ -25,18 +44,41 @@ const API = {
             headers['Authorization'] = `Bearer ${token}`;
         }
         
-        const response = await fetch(`${this.baseURL}${endpoint}`, {
+        const url = `${this.baseURL}${endpoint}`;
+        debugPrint('Making request to:', url, 'with options:', options);
+        
+        const response = await fetch(url, {
             ...options,
             headers,
             credentials: 'include', // Always include cookies
         });
         
+        debugPrint('Response status:', response.status, response.statusText);
+        
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || error.error || 'Request failed');
+            let errorMessage = 'Request failed';
+            try {
+                const error = await response.json();
+                errorMessage = error.message || error.error || errorMessage;
+                debugPrint('Error response:', error);
+            } catch (parseError) {
+                // If JSON parsing fails, try to get text
+                const text = await response.text();
+                debugPrint('Failed to parse error JSON. Response text:', text);
+                errorMessage = `Request failed with status ${response.status}`;
+            }
+            throw new Error(errorMessage);
         }
         
-        return response.json();
+        try {
+            const data = await response.json();
+            debugPrint('Response data:', data);
+            return data;
+        } catch (parseError) {
+            const text = await response.text();
+            debugPrint('Failed to parse response JSON. Response text:', text);
+            throw new Error(`JSON.parse: unexpected character at line 1 column 1 of the JSON data`);
+        }
     },
     
     // Auth
@@ -54,6 +96,7 @@ const API = {
     },
     
     async login(username, password) {
+        debugPrint('Attempting login for user:', username);
         const data = await this.request('/login', {
             method: 'POST',
             body: JSON.stringify({ username, password }),
@@ -61,6 +104,7 @@ const API = {
         });
         // Token is set in cookie by server, extract from response if present
         if (data.token) {
+            debugPrint('Login successful, token received');
             this.setToken(data.token);
         }
         return data;

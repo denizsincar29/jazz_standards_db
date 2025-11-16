@@ -6,6 +6,7 @@ postgres_data/
 
 # Go
 jazz_standards_db
+create_admin
 *.exe
 *.dll
 *.so
