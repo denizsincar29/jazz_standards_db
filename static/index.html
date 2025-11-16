@@ -56,7 +56,7 @@
                 <button class="nav-btn active" data-view="my-standards">My Standards</button>
                 <button class="nav-btn" data-view="all-standards">All Standards</button>
                 <button class="nav-btn" data-view="categories">Categories</button>
-                <button class="nav-btn admin-only hidden" data-view="pending">⏳ Pending Approvals</button>
+                <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true">⏳ Pending Approvals</button>
             </nav>
 
             <!-- My Standards View -->
@@ -162,7 +162,7 @@
         </div>
     </div>
 
-    <div id="offline-indicator" class="hidden">Offline</div>
+    <div id="offline-indicator" class="hidden" aria-hidden="true">Offline</div>
 
     <script src="static/js/api.js"></script>
     <script src="static/js/app.js"></script>

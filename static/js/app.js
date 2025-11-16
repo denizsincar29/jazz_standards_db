@@ -501,8 +501,10 @@ function checkOnlineStatus() {
     function updateStatus() {
         if (navigator.onLine) {
             indicator.classList.add('hidden');
+            indicator.setAttribute('aria-hidden', 'true');
         } else {
             indicator.classList.remove('hidden');
+            indicator.setAttribute('aria-hidden', 'false');
         }
     }
     
