@@ -8,7 +8,6 @@ import (
 	"github.com/denizsincar29/jazz_standards_db/database"
 	"github.com/denizsincar29/jazz_standards_db/models"
 	"github.com/denizsincar29/jazz_standards_db/utils"
-	"gorm.io/gorm"
 )
 
 type RegisterRequest struct {
@@ -140,70 +139,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	})
 
 	utils.RespondJSON(w, http.StatusOK, user)
-}
-
-// CreateAdmin creates the first admin user (only works if no users exist)
-func CreateAdmin(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	// Validate input
-	if req.Username == "" || req.Name == "" || req.Password == "" {
-		utils.RespondError(w, http.StatusBadRequest, "Username, name, and password are required")
-		return
-	}
-
-	// Hash password
-	hashedPassword, err := utils.HashPassword(req.Password)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to process password")
-		return
-	}
-
-	// Generate token
-	token, err := utils.GenerateToken(32)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "Failed to generate token")
-		return
-	}
-
-	// Create admin user - use a transaction to ensure atomicity
-	var user models.User
-	err = database.DB.Transaction(func(tx *gorm.DB) error {
-		// Check if any users exist within the transaction
-		var count int64
-		if err := tx.Model(&models.User{}).Count(&count).Error; err != nil {
-			return err
-		}
-		if count > 0 {
-			return gorm.ErrRecordNotFound // Use this error to indicate admin already exists
-		}
-
-		// Create admin user
-		user = models.User{
-			Username:     req.Username,
-			Name:         req.Name,
-			PasswordHash: hashedPassword,
-			IsAdmin:      true,
-			Token:        &token,
-		}
-
-		return tx.Create(&user).Error
-	})
-
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			utils.RespondError(w, http.StatusForbidden, "Admin already exists")
-		} else {
-			utils.RespondError(w, http.StatusInternalServerError, "Failed to create admin")
-		}
-		return
-	}
-
-	utils.RespondJSON(w, http.StatusCreated, user)
 }
 
 // Logout clears the user's token

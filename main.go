@@ -73,7 +73,6 @@ func registerRoutes(r *mux.Router, basePath string) {
 	// Auth routes (public)
 	api.HandleFunc("/register", handlers.Register).Methods("POST")
 	api.HandleFunc("/login", handlers.Login).Methods("POST")
-	api.HandleFunc("/admin", handlers.CreateAdmin).Methods("POST")
 	api.HandleFunc("/logout", middleware.RequireAuth(handlers.Logout)).Methods("POST")
 
 	// User routes
