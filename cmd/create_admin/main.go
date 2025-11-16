@@ -16,11 +16,11 @@ import (
 )
 
 type User struct {
-	ID       uint   `gorm:"primaryKey"`
-	Username string `gorm:"uniqueIndex;not null"`
-	Name     string `gorm:"not null"`
-	Password string `gorm:"not null"`
-	IsAdmin  bool   `gorm:"default:false"`
+	ID           uint   `gorm:"primaryKey"`
+	Username     string `gorm:"uniqueIndex;not null"`
+	Name         string `gorm:"not null"`
+	PasswordHash string `gorm:"not null"`
+	IsAdmin      bool   `gorm:"default:false"`
 }
 
 func main() {
@@ -121,19 +121,19 @@ func main() {
 	fmt.Println("\nCreating admin user...")
 	
 	user := User{
-		Username: username,
-		Name:     name,
-		Password: string(hashedPassword),
-		IsAdmin:  true,
+		Username:     username,
+		Name:         name,
+		PasswordHash: string(hashedPassword),
+		IsAdmin:      true,
 	}
 
 	// Use ON CONFLICT to update if exists
 	result := db.Model(&User{}).
 		Where("username = ?", username).
 		Assign(map[string]interface{}{
-			"name":     name,
-			"password": string(hashedPassword),
-			"is_admin": true,
+			"name":          name,
+			"password_hash": string(hashedPassword),
+			"is_admin":      true,
 		}).
 		FirstOrCreate(&user)
 
