@@ -60,10 +60,10 @@ function setupEventListeners() {
     
     // Add standard/category buttons
     document.getElementById('add-standard-btn').addEventListener('click', () => {
-        document.getElementById('add-standard-modal').classList.remove('hidden');
+        showElement('add-standard-modal');
     });
     document.getElementById('add-category-btn').addEventListener('click', () => {
-        document.getElementById('add-category-modal').classList.remove('hidden');
+        showElement('add-category-modal');
     });
     
     // Modal forms
@@ -73,7 +73,11 @@ function setupEventListeners() {
     // Modal cancel buttons
     document.querySelectorAll('.modal .cancel').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.target.closest('.modal').classList.add('hidden');
+            const modal = e.target.closest('.modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
         });
     });
 }
@@ -123,15 +127,32 @@ async function handleLogout() {
     showAuthScreen();
 }
 
+// Helper functions for accessibility-aware hiding/showing
+function hideElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.classList.add('hidden');
+        element.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function showElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.classList.remove('hidden');
+        element.setAttribute('aria-hidden', 'false');
+    }
+}
+
 // Screen switching
 function showAuthScreen() {
-    document.getElementById('auth-screen').classList.remove('hidden');
-    document.getElementById('main-screen').classList.add('hidden');
+    showElement('auth-screen');
+    hideElement('main-screen');
 }
 
 function showMainScreen() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('main-screen').classList.remove('hidden');
+    hideElement('auth-screen');
+    showElement('main-screen');
     document.getElementById('user-name').textContent = currentUser.name;
     
     // Show/hide admin controls
@@ -139,8 +160,10 @@ function showMainScreen() {
     adminElements.forEach(el => {
         if (currentUser.is_admin) {
             el.classList.remove('hidden');
+            el.setAttribute('aria-hidden', 'false');
         } else {
             el.classList.add('hidden');
+            el.setAttribute('aria-hidden', 'true');
         }
     });
     
@@ -152,10 +175,15 @@ function showMainScreen() {
 
 function switchView(viewName) {
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
+    document.querySelectorAll('.view').forEach(view => {
+        view.classList.add('hidden');
+        view.setAttribute('aria-hidden', 'true');
+    });
     
     document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
-    document.getElementById(`${viewName}-view`).classList.remove('hidden');
+    const activeView = document.getElementById(`${viewName}-view`);
+    activeView.classList.remove('hidden');
+    activeView.setAttribute('aria-hidden', 'false');
     
     // Load data for the view
     if (viewName === 'all-standards') {
@@ -407,7 +435,7 @@ async function handleAddStandard(e) {
     
     try {
         const response = await API.createStandard(title, composer, style, note);
-        document.getElementById('add-standard-modal').classList.add('hidden');
+        hideElement('add-standard-modal');
         e.target.reset();
         
         // Show success message
@@ -434,7 +462,7 @@ async function handleAddCategory(e) {
     
     try {
         await API.createCategory(name, color);
-        document.getElementById('add-category-modal').classList.add('hidden');
+        hideElement('add-category-modal');
         e.target.reset();
         await loadCategories();
     } catch (error) {

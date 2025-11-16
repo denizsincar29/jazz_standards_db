@@ -13,7 +13,7 @@
 <body>
     <div id="app">
         <!-- Login/Register Screen -->
-        <div id="auth-screen" class="screen">
+        <div id="auth-screen" class="screen" aria-hidden="false">
             <div class="container">
                 <h1>🎷 Jazz Standards DB</h1>
                 <div class="tabs">
@@ -41,7 +41,7 @@
         </div>
 
         <!-- Main App Screen -->
-        <div id="main-screen" class="screen hidden">
+        <div id="main-screen" class="screen hidden" aria-hidden="true">
             <!-- Header -->
             <header>
                 <h1>🎷 Jazz Standards DB</h1>
@@ -116,7 +116,7 @@
         </div>
 
         <!-- Modals -->
-        <div id="add-standard-modal" class="modal hidden">
+        <div id="add-standard-modal" class="modal hidden" aria-hidden="true">
             <div class="modal-content">
                 <h3>Add Jazz Standard</h3>
                 <form id="add-standard-form">
@@ -147,7 +147,7 @@
             </div>
         </div>
 
-        <div id="add-category-modal" class="modal hidden">
+        <div id="add-category-modal" class="modal hidden" aria-hidden="true">
             <div class="modal-content">
                 <h3>Add Category</h3>
                 <form id="add-category-form">
