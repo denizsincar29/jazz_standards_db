@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Unit Tests - Jazz Standards DB</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ecf0f1;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .test-item h3 {
+            margin: 0 0 10px 0;
+            color: #34495e;
+            font-size: 16px;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .run-btn {
+            background: #3498db;
+            color: white;
+        }
+        .run-btn:hover {
+            background: #2980b9;
+        }
+        .run-all-btn {
+            background: #27ae60;
+            color: white;
+            font-size: 16px;
+            padding: 12px 24px;
+        }
+        .run-all-btn:hover {
+            background: #229954;
+        }
+        .clear-btn {
+            background: #95a5a6;
+            color: white;
+        }
+        .clear-btn:hover {
+            background: #7f8c8d;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .test-result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-result.pending {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-badge.success {
+            background: #27ae60;
+            color: white;
+        }
+        .status-badge.error {
+            background: #e74c3c;
+            color: white;
+        }
+        .status-badge.pending {
+            background: #f39c12;
+            color: white;
+        }
+        .summary {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        .input-group textarea {
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎷 Jazz Standards DB - API Unit Tests</h1>
+    
+    <div class="warning">
+        <strong>⚠️ Testing Mode:</strong> This page is only available when TEST_API environment variable is set. Use for development/testing only.
+    </div>
+
+    <div class="summary" id="summary">
+        Ready to test • Click "Run All Tests" or individual tests
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <button class="run-all-btn" onclick="runAllTests()">▶️ Run All Tests</button>
+        <button class="clear-btn" onclick="clearAllResults()">🗑️ Clear All Results</button>
+    </div>
+
+    <!-- Authentication Tests -->
+    <div class="test-section">
+        <h2>🔐 Authentication</h2>
+
+        <div class="test-item" id="test-register">
+            <h3>POST /api/register <span class="status-badge pending" id="status-register">PENDING</span></h3>
+            <div class="input-group">
+                <label>Username:</label>
+                <input type="text" id="input-register-username" value="testuser" placeholder="username">
+            </div>
+            <div class="input-group">
+                <label>Name:</label>
+                <input type="text" id="input-register-name" value="Test User" placeholder="name">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input type="password" id="input-register-password" value="testpass123" placeholder="password">
+            </div>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testRegister()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('register')">Clear</button>
+            </div>
+            <div id="result-register"></div>
+        </div>
+
+        <div class="test-item" id="test-login">
+            <h3>POST /api/login <span class="status-badge pending" id="status-login">PENDING</span></h3>
+            <div class="input-group">
+                <label>Username:</label>
+                <input type="text" id="input-login-username" value="testuser" placeholder="username">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input type="password" id="input-login-password" value="testpass123" placeholder="password">
+            </div>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testLogin()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('login')">Clear</button>
+            </div>
+            <div id="result-login"></div>
+        </div>
+
+        <div class="test-item" id="test-get-me">
+            <h3>GET /api/users/me <span class="status-badge pending" id="status-get-me">PENDING</span></h3>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testGetMe()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('get-me')">Clear</button>
+            </div>
+            <div id="result-get-me"></div>
+        </div>
+
+        <div class="test-item" id="test-logout">
+            <h3>POST /api/logout <span class="status-badge pending" id="status-logout">PENDING</span></h3>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testLogout()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('logout')">Clear</button>
+            </div>
+            <div id="result-logout"></div>
+        </div>
+    </div>
+
+    <!-- Jazz Standards Tests -->
+    <div class="test-section">
+        <h2>🎺 Jazz Standards</h2>
+
+        <div class="test-item" id="test-create-standard">
+            <h3>POST /api/jazz_standards <span class="status-badge pending" id="status-create-standard">PENDING</span></h3>
+            <div class="input-group">
+                <label>Request Body (JSON):</label>
+                <textarea id="input-create-standard">{
+  "title": "Test Standard",
+  "composer": "Test Composer",
+  "style": "Bebop",
+  "year": 1950,
+  "key": "C",
+  "notes": "Test notes"
+}</textarea>
+            </div>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testCreateStandard()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('create-standard')">Clear</button>
+            </div>
+            <div id="result-create-standard"></div>
+        </div>
+
+        <div class="test-item" id="test-list-standards">
+            <h3>GET /api/jazz_standards <span class="status-badge pending" id="status-list-standards">PENDING</span></h3>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testListStandards()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('list-standards')">Clear</button>
+            </div>
+            <div id="result-list-standards"></div>
+        </div>
+
+        <div class="test-item" id="test-list-pending">
+            <h3>GET /api/jazz_standards/pending (Admin only) <span class="status-badge pending" id="status-list-pending">PENDING</span></h3>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testListPending()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('list-pending')">Clear</button>
+            </div>
+            <div id="result-list-pending"></div>
+        </div>
+
+        <div class="test-item" id="test-approve-standard">
+            <h3>POST /api/jazz_standards/{id}/approve (Admin only) <span class="status-badge pending" id="status-approve-standard">PENDING</span></h3>
+            <div class="input-group">
+                <label>Standard ID:</label>
+                <input type="number" id="input-approve-id" value="1" placeholder="Standard ID">
+            </div>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testApproveStandard()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('approve-standard')">Clear</button>
+            </div>
+            <div id="result-approve-standard"></div>
+        </div>
+    </div>
+
+    <!-- User Standards Tests -->
+    <div class="test-section">
+        <h2>📚 User Standards</h2>
+
+        <div class="test-item" id="test-list-user-standards">
+            <h3>GET /api/users/me/standards <span class="status-badge pending" id="status-list-user-standards">PENDING</span></h3>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testListUserStandards()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('list-user-standards')">Clear</button>
+            </div>
+            <div id="result-list-user-standards"></div>
+        </div>
+
+        <div class="test-item" id="test-add-user-standard">
+            <h3>POST /api/users/me/standards/{id} <span class="status-badge pending" id="status-add-user-standard">PENDING</span></h3>
+            <div class="input-group">
+                <label>Standard ID:</label>
+                <input type="number" id="input-add-user-standard-id" value="1" placeholder="Standard ID">
+            </div>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testAddUserStandard()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('add-user-standard')">Clear</button>
+            </div>
+            <div id="result-add-user-standard"></div>
+        </div>
+    </div>
+
+    <!-- Categories Tests -->
+    <div class="test-section">
+        <h2>🏷️ Categories</h2>
+
+        <div class="test-item" id="test-list-categories">
+            <h3>GET /api/users/me/categories <span class="status-badge pending" id="status-list-categories">PENDING</span></h3>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testListCategories()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('list-categories')">Clear</button>
+            </div>
+            <div id="result-list-categories"></div>
+        </div>
+
+        <div class="test-item" id="test-create-category">
+            <h3>POST /api/users/me/categories <span class="status-badge pending" id="status-create-category">PENDING</span></h3>
+            <div class="input-group">
+                <label>Request Body (JSON):</label>
+                <textarea id="input-create-category">{
+  "name": "Test Category",
+  "color": "#3498db"
+}</textarea>
+            </div>
+            <div class="test-controls">
+                <button class="run-btn" onclick="testCreateCategory()">Run Test</button>
+                <button class="clear-btn" onclick="clearResult('create-category')">Clear</button>
+            </div>
+            <div id="result-create-category"></div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {
+            passed: 0,
+            failed: 0,
+            total: 0
+        };
+
+        let authToken = null;
+        let createdStandardId = null;
+        let createdCategoryId = null;
+
+        // Get base path from page URL
+        const basePath = window.location.pathname.replace('/testapi.html', '').replace('/testapi', '');
+
+        function apiUrl(path) {
+            return basePath + '/api' + path;
+        }
+
+        async function makeRequest(method, url, body = null, needsAuth = false) {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (needsAuth && authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            const options = {
+                method,
+                headers,
+                credentials: 'include'
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(url, options);
+            const text = await response.text();
+            
+            let data;
+            try {
+                data = text ? JSON.parse(text) : null;
+            } catch (e) {
+                data = text;
+            }
+
+            return {
+                status: response.status,
+                ok: response.ok,
+                data
+            };
+        }
+
+        function showResult(testName, success, message, details = null) {
+            const resultDiv = document.getElementById(`result-${testName}`);
+            const statusBadge = document.getElementById(`status-${testName}`);
+            
+            const resultClass = success ? 'success' : 'error';
+            const statusClass = success ? 'success' : 'error';
+            const statusText = success ? 'PASSED' : 'FAILED';
+
+            let detailsText = details ? '\n\n' + JSON.stringify(details, null, 2) : '';
+            
+            resultDiv.innerHTML = `<div class="test-result ${resultClass}">${message}${detailsText}</div>`;
+            statusBadge.className = `status-badge ${statusClass}`;
+            statusBadge.textContent = statusText;
+
+            // Update summary
+            if (success) {
+                testResults.passed++;
+            } else {
+                testResults.failed++;
+            }
+            testResults.total++;
+            updateSummary();
+        }
+
+        function clearResult(testName) {
+            const resultDiv = document.getElementById(`result-${testName}`);
+            const statusBadge = document.getElementById(`status-${testName}`);
+            
+            resultDiv.innerHTML = '';
+            statusBadge.className = 'status-badge pending';
+            statusBadge.textContent = 'PENDING';
+        }
+
+        function clearAllResults() {
+            const allTests = [
+                'register', 'login', 'get-me', 'logout',
+                'create-standard', 'list-standards', 'list-pending', 'approve-standard',
+                'list-user-standards', 'add-user-standard',
+                'list-categories', 'create-category'
+            ];
+
+            allTests.forEach(test => clearResult(test));
+            
+            testResults = { passed: 0, failed: 0, total: 0 };
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary');
+            if (testResults.total === 0) {
+                summaryDiv.textContent = 'Ready to test • Click "Run All Tests" or individual tests';
+            } else {
+                summaryDiv.textContent = `Tests: ${testResults.total} | Passed: ${testResults.passed} ✅ | Failed: ${testResults.failed} ❌`;
+            }
+        }
+
+        // Authentication Tests
+        async function testRegister() {
+            const username = document.getElementById('input-register-username').value;
+            const name = document.getElementById('input-register-name').value;
+            const password = document.getElementById('input-register-password').value;
+
+            try {
+                const result = await makeRequest('POST', apiUrl('/register'), {
+                    username, name, password
+                });
+
+                if (result.ok) {
+                    showResult('register', true, `✅ User registered successfully (${result.status})`, result.data);
+                } else {
+                    showResult('register', false, `❌ Registration failed (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('register', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testLogin() {
+            const username = document.getElementById('input-login-username').value;
+            const password = document.getElementById('input-login-password').value;
+
+            try {
+                const result = await makeRequest('POST', apiUrl('/login'), {
+                    username, password
+                });
+
+                if (result.ok && result.data && result.data.token) {
+                    authToken = result.data.token;
+                    showResult('login', true, `✅ Login successful (${result.status})\nToken saved for subsequent tests`, result.data);
+                } else {
+                    showResult('login', false, `❌ Login failed (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('login', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testGetMe() {
+            if (!authToken) {
+                showResult('get-me', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const result = await makeRequest('GET', apiUrl('/users/me'), null, true);
+
+                if (result.ok) {
+                    showResult('get-me', true, `✅ User info retrieved (${result.status})`, result.data);
+                } else {
+                    showResult('get-me', false, `❌ Failed to get user info (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('get-me', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testLogout() {
+            if (!authToken) {
+                showResult('logout', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const result = await makeRequest('POST', apiUrl('/logout'), null, true);
+
+                if (result.ok) {
+                    showResult('logout', true, `✅ Logout successful (${result.status})`, result.data);
+                    authToken = null;
+                } else {
+                    showResult('logout', false, `❌ Logout failed (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('logout', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        // Jazz Standards Tests
+        async function testCreateStandard() {
+            if (!authToken) {
+                showResult('create-standard', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const body = JSON.parse(document.getElementById('input-create-standard').value);
+                const result = await makeRequest('POST', apiUrl('/jazz_standards'), body, true);
+
+                if (result.ok && result.data && result.data.id) {
+                    createdStandardId = result.data.id;
+                    showResult('create-standard', true, `✅ Standard created (${result.status})\nID: ${createdStandardId}`, result.data);
+                } else {
+                    showResult('create-standard', false, `❌ Failed to create standard (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('create-standard', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testListStandards() {
+            if (!authToken) {
+                showResult('list-standards', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const result = await makeRequest('GET', apiUrl('/jazz_standards'), null, true);
+
+                if (result.ok) {
+                    const count = Array.isArray(result.data) ? result.data.length : 0;
+                    showResult('list-standards', true, `✅ Retrieved ${count} standards (${result.status})`, result.data);
+                } else {
+                    showResult('list-standards', false, `❌ Failed to list standards (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('list-standards', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testListPending() {
+            if (!authToken) {
+                showResult('list-pending', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const result = await makeRequest('GET', apiUrl('/jazz_standards/pending'), null, true);
+
+                if (result.ok) {
+                    const count = Array.isArray(result.data) ? result.data.length : 0;
+                    showResult('list-pending', true, `✅ Retrieved ${count} pending standards (${result.status})`, result.data);
+                } else {
+                    showResult('list-pending', false, `❌ Failed to list pending (${result.status}) - May require admin role`, result.data);
+                }
+            } catch (error) {
+                showResult('list-pending', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testApproveStandard() {
+            if (!authToken) {
+                showResult('approve-standard', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            const id = document.getElementById('input-approve-id').value;
+
+            try {
+                const result = await makeRequest('POST', apiUrl(`/jazz_standards/${id}/approve`), null, true);
+
+                if (result.ok) {
+                    showResult('approve-standard', true, `✅ Standard approved (${result.status})`, result.data);
+                } else {
+                    showResult('approve-standard', false, `❌ Failed to approve (${result.status}) - May require admin role`, result.data);
+                }
+            } catch (error) {
+                showResult('approve-standard', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        // User Standards Tests
+        async function testListUserStandards() {
+            if (!authToken) {
+                showResult('list-user-standards', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const result = await makeRequest('GET', apiUrl('/users/me/standards'), null, true);
+
+                if (result.ok) {
+                    const count = Array.isArray(result.data) ? result.data.length : 0;
+                    showResult('list-user-standards', true, `✅ Retrieved ${count} user standards (${result.status})`, result.data);
+                } else {
+                    showResult('list-user-standards', false, `❌ Failed to list user standards (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('list-user-standards', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testAddUserStandard() {
+            if (!authToken) {
+                showResult('add-user-standard', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            const id = document.getElementById('input-add-user-standard-id').value;
+
+            try {
+                const result = await makeRequest('POST', apiUrl(`/users/me/standards/${id}`), {}, true);
+
+                if (result.ok) {
+                    showResult('add-user-standard', true, `✅ Standard added to user library (${result.status})`, result.data);
+                } else {
+                    showResult('add-user-standard', false, `❌ Failed to add standard (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('add-user-standard', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        // Categories Tests
+        async function testListCategories() {
+            if (!authToken) {
+                showResult('list-categories', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const result = await makeRequest('GET', apiUrl('/users/me/categories'), null, true);
+
+                if (result.ok) {
+                    const count = Array.isArray(result.data) ? result.data.length : 0;
+                    showResult('list-categories', true, `✅ Retrieved ${count} categories (${result.status})`, result.data);
+                } else {
+                    showResult('list-categories', false, `❌ Failed to list categories (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('list-categories', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        async function testCreateCategory() {
+            if (!authToken) {
+                showResult('create-category', false, '❌ No auth token. Please login first.');
+                return;
+            }
+
+            try {
+                const body = JSON.parse(document.getElementById('input-create-category').value);
+                const result = await makeRequest('POST', apiUrl('/users/me/categories'), body, true);
+
+                if (result.ok && result.data && result.data.id) {
+                    createdCategoryId = result.data.id;
+                    showResult('create-category', true, `✅ Category created (${result.status})\nID: ${createdCategoryId}`, result.data);
+                } else {
+                    showResult('create-category', false, `❌ Failed to create category (${result.status})`, result.data);
+                }
+            } catch (error) {
+                showResult('create-category', false, `❌ Request error: ${error.message}`);
+            }
+        }
+
+        // Run all tests sequentially
+        async function runAllTests() {
+            clearAllResults();
+            
+            // Auth tests
+            await testRegister();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testLogin();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testGetMe();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Standards tests
+            await testCreateStandard();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testListStandards();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testListPending();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // User standards tests
+            await testListUserStandards();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAddUserStandard();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Category tests
+            await testListCategories();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testCreateCategory();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Approve standard if created and we're admin
+            if (createdStandardId) {
+                document.getElementById('input-approve-id').value = createdStandardId;
+                await testApproveStandard();
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Logout
+            await testLogout();
+        }
+    </script>
+</body>
+</html>

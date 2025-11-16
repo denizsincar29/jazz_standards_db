@@ -18,6 +18,7 @@ type Config struct {
 	JWTSecret   string
 	Environment string
 	BasePath    string
+	TestAPI     bool
 }
 
 var AppConfig *Config
@@ -39,6 +40,7 @@ func Load() error {
 		JWTSecret:   getEnv("JWT_SECRET", "change-me-in-production"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 		BasePath:    getEnv("BASE_PATH", ""),
+		TestAPI:     getEnv("TEST_API", "") == "true",
 	}
 
 	return nil

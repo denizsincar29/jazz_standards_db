@@ -117,6 +117,15 @@ func registerRoutes(r *mux.Router, basePath string) {
 			http.ServeFile(w, r, filepath.Join(staticDir, "manifest.json"))
 		})
 
+		// Serve testapi page (only if TEST_API environment variable is set)
+		if os.Getenv("TEST_API") != "" {
+			r.HandleFunc(route("/testapi"), func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				http.ServeFile(w, r, filepath.Join(staticDir, "testapi.html"))
+			})
+			log.Println("API testing page enabled at /testapi (TEST_API environment variable is set)")
+		}
+
 		// Serve static files (CSS, JS, images)
 		staticFileServer := http.FileServer(http.Dir(staticDir))
 		if basePath != "" {
