@@ -86,10 +86,13 @@ async function handleLogin(e) {
     const errorEl = document.getElementById('login-error');
     
     try {
+        debugPrint('handleLogin called for user:', username);
         currentUser = await API.login(username, password);
+        debugPrint('Login successful, user:', currentUser);
         showMainScreen();
         await loadMyStandards();
     } catch (error) {
+        debugPrint('Login failed with error:', error);
         errorEl.textContent = error.message;
     }
 }

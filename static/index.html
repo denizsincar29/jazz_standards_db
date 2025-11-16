@@ -167,6 +167,9 @@
     <script src="static/js/api.js"></script>
     <script src="static/js/app.js"></script>
     <script>
+        // To enable debug mode, open browser console and run: window.DEBUG = true
+        // This will show detailed logs for API requests and responses
+        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
                 .then(reg => console.log('Service Worker registered', reg))
