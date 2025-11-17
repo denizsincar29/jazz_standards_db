@@ -104,32 +104,12 @@ function setupEventListeners() {
     
     // Add standard/category buttons
     document.getElementById('add-standard-btn').addEventListener('click', () => {
-        debugBeep(1400, 100); // High beep for modal open
         console.log('[BUTTON CLICK] 🎵 Add Standard button clicked');
-        showElement('add-standard-modal');
-        // Focus the first input field for accessibility
-        setTimeout(() => {
-            const firstInput = document.getElementById('new-standard-title');
-            if (firstInput) {
-                console.log('[FOCUS] 🎯 Attempting to focus first input');
-                firstInput.focus();
-                console.log('[FOCUS] ✅ First input focused');
-            }
-        }, 100);
+        showModal('add-standard-modal', 'new-standard-title');
     });
     document.getElementById('add-category-btn').addEventListener('click', () => {
-        debugBeep(1400, 100); // High beep for modal open
         console.log('[BUTTON CLICK] 🎵 Add Category button clicked');
-        showElement('add-category-modal');
-        // Focus the first input field for accessibility
-        setTimeout(() => {
-            const firstInput = document.getElementById('new-category-name');
-            if (firstInput) {
-                console.log('[FOCUS] 🎯 Attempting to focus first input');
-                firstInput.focus();
-                console.log('[FOCUS] ✅ First input focused');
-            }
-        }, 100);
+        showModal('add-category-modal', 'new-category-name');
     });
     
     // Modal forms
@@ -139,12 +119,20 @@ function setupEventListeners() {
     // Modal cancel buttons
     document.querySelectorAll('.modal .cancel').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            debugBeep(500, 100); // Lower beep for modal close
             const modal = e.target.closest('.modal');
-            if (modal) {
-                console.log('[MODAL CANCEL] 🚫 Hiding modal:', modal.id);
-                modal.classList.add('hidden');
-                console.log('[MODAL CANCEL] ✅ Modal hidden, classList:', modal.classList.toString());
+            if (modal && modal.id) {
+                hideModal(modal.id);
+            }
+        });
+    });
+    
+    // Click outside modal to close
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            // Only close if clicking the modal backdrop, not the modal content
+            if (e.target === modal && modal.id) {
+                console.log('[MODAL] 🖱️ Clicked outside modal, closing:', modal.id);
+                hideModal(modal.id);
             }
         });
     });
@@ -220,6 +208,58 @@ function showElement(elementId) {
         debugBeep(400, 150); // Even lower beep for error
         console.warn('[SHOW] ⚠️', elementId, 'element not found');
     }
+}
+
+// Dedicated modal management functions for better reliability
+function showModal(modalId, focusInputId = null) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        debugBeep(400, 150);
+        console.error('[MODAL] ❌ Modal not found:', modalId);
+        return;
+    }
+    
+    debugBeep(1400, 100); // High beep for modal open
+    console.log('[MODAL SHOW] 🎵 Opening modal:', modalId);
+    console.log('[MODAL SHOW] classList before:', modal.classList.toString());
+    
+    // Remove hidden class
+    modal.classList.remove('hidden');
+    
+    console.log('[MODAL SHOW] classList after:', modal.classList.toString());
+    console.log('[MODAL SHOW] display:', window.getComputedStyle(modal).display);
+    
+    // Focus input if specified
+    if (focusInputId) {
+        setTimeout(() => {
+            const input = document.getElementById(focusInputId);
+            if (input) {
+                console.log('[MODAL SHOW] 🎯 Focusing input:', focusInputId);
+                input.focus();
+                console.log('[MODAL SHOW] ✅ Input focused');
+            }
+        }, 100);
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        debugBeep(400, 150);
+        console.error('[MODAL] ❌ Modal not found:', modalId);
+        return;
+    }
+    
+    debugBeep(500, 100); // Lower beep for modal close
+    console.log('[MODAL HIDE] 🚫 Closing modal:', modalId);
+    console.log('[MODAL HIDE] classList before:', modal.classList.toString());
+    
+    // Add hidden class
+    modal.classList.add('hidden');
+    
+    console.log('[MODAL HIDE] classList after:', modal.classList.toString());
+    console.log('[MODAL HIDE] display:', window.getComputedStyle(modal).display);
+    console.log('[MODAL HIDE] ✅ Modal closed');
 }
 
 // Screen switching
@@ -551,7 +591,7 @@ async function handleAddStandard(e) {
     
     try {
         const response = await API.createStandard(title, composer, style, note);
-        hideElement('add-standard-modal');
+        hideModal('add-standard-modal');
         e.target.reset();
         
         // Show success message
@@ -578,7 +618,7 @@ async function handleAddCategory(e) {
     
     try {
         await API.createCategory(name, color);
-        hideElement('add-category-modal');
+        hideModal('add-category-modal');
         e.target.reset();
         await loadCategories();
     } catch (error) {
