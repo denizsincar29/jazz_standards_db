@@ -60,10 +60,28 @@ function setupEventListeners() {
     
     // Add standard/category buttons
     document.getElementById('add-standard-btn').addEventListener('click', () => {
+        console.log('[BUTTON CLICK] Add Standard button clicked');
         showElement('add-standard-modal');
+        // Focus the first input field for accessibility
+        setTimeout(() => {
+            const firstInput = document.getElementById('new-standard-title');
+            if (firstInput) {
+                console.log('[FOCUS] Attempting to focus first input');
+                firstInput.focus();
+            }
+        }, 100);
     });
     document.getElementById('add-category-btn').addEventListener('click', () => {
+        console.log('[BUTTON CLICK] Add Category button clicked');
         showElement('add-category-modal');
+        // Focus the first input field for accessibility
+        setTimeout(() => {
+            const firstInput = document.getElementById('new-category-name');
+            if (firstInput) {
+                console.log('[FOCUS] Attempting to focus first input');
+                firstInput.focus();
+            }
+        }, 100);
     });
     
     // Modal forms
@@ -75,7 +93,9 @@ function setupEventListeners() {
         btn.addEventListener('click', (e) => {
             const modal = e.target.closest('.modal');
             if (modal) {
+                console.log('[MODAL CANCEL] Hiding modal:', modal.id);
                 modal.classList.add('hidden');
+                console.log('[MODAL CANCEL] Modal hidden, classList:', modal.classList.toString());
             }
         });
     });
@@ -130,14 +150,22 @@ async function handleLogout() {
 function hideElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
+        console.log('[HIDE]', elementId, 'classList before:', element.classList.toString());
         element.classList.add('hidden');
+        console.log('[HIDE]', elementId, 'classList after:', element.classList.toString(), 'display:', window.getComputedStyle(element).display);
+    } else {
+        console.warn('[HIDE]', elementId, 'element not found');
     }
 }
 
 function showElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
+        console.log('[SHOW]', elementId, 'classList before:', element.classList.toString());
         element.classList.remove('hidden');
+        console.log('[SHOW]', elementId, 'classList after:', element.classList.toString(), 'display:', window.getComputedStyle(element).display);
+    } else {
+        console.warn('[SHOW]', elementId, 'element not found');
     }
 }
 
