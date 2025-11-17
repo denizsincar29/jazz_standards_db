@@ -129,6 +129,16 @@ header h1 {
     gap: 15px;
 }
 
+.admin-badge {
+    background: #f39c12;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
 #logout-btn {
     padding: 8px 16px;
     background: #e74c3c;
