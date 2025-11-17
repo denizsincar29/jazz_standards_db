@@ -312,12 +312,12 @@ function switchView(viewName) {
     console.log('[SWITCH VIEW] 🔄 Found', navButtons.length, 'nav buttons to deactivate');
     navButtons.forEach(btn => btn.classList.remove('active'));
     
-    // Hide all views
+    // Remove active from all views (this hides them via CSS)
     const allViews = document.querySelectorAll('.view');
     console.log('[SWITCH VIEW] 🔄 Found', allViews.length, 'views to hide');
     allViews.forEach(view => {
-        console.log('[SWITCH VIEW] 🔄 Hiding view:', view.id);
-        view.classList.add('hidden');
+        console.log('[SWITCH VIEW] 🔄 Hiding view:', view.id, '- removing active class');
+        view.classList.remove('active');
     });
     
     // Activate the selected nav button
@@ -329,11 +329,12 @@ function switchView(viewName) {
         console.warn('[SWITCH VIEW] ⚠️ Nav button not found for:', viewName);
     }
     
-    // Show the selected view
+    // Show the selected view by adding active class
     const activeView = document.getElementById(`${viewName}-view`);
     if (activeView) {
-        activeView.classList.remove('hidden');
+        activeView.classList.add('active');
         console.log('[SWITCH VIEW] ✅ Showing view:', viewName, '- classList:', activeView.classList.toString());
+        console.log('[SWITCH VIEW] ✅ Display:', window.getComputedStyle(activeView).display);
     } else {
         console.error('[SWITCH VIEW] ❌ View not found:', `${viewName}-view`);
     }
