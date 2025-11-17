@@ -76,7 +76,6 @@ function setupEventListeners() {
             const modal = e.target.closest('.modal');
             if (modal) {
                 modal.classList.add('hidden');
-                modal.setAttribute('aria-hidden', 'true');
             }
         });
     });
@@ -127,12 +126,11 @@ async function handleLogout() {
     showAuthScreen();
 }
 
-// Helper functions for accessibility-aware hiding/showing
+// Helper functions for hiding/showing elements
 function hideElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
         element.classList.add('hidden');
-        element.setAttribute('aria-hidden', 'true');
     }
 }
 
@@ -140,7 +138,6 @@ function showElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
         element.classList.remove('hidden');
-        element.setAttribute('aria-hidden', 'false');
     }
 }
 
@@ -153,17 +150,22 @@ function showAuthScreen() {
 function showMainScreen() {
     hideElement('auth-screen');
     showElement('main-screen');
-    document.getElementById('user-name').textContent = currentUser.name;
+    
+    // Set user name with admin badge if applicable
+    const userNameEl = document.getElementById('user-name');
+    if (currentUser.is_admin) {
+        userNameEl.innerHTML = `${currentUser.name} <span class="admin-badge">ADMIN</span>`;
+    } else {
+        userNameEl.textContent = currentUser.name;
+    }
     
     // Show/hide admin controls
     const adminElements = document.querySelectorAll('.admin-only');
     adminElements.forEach(el => {
         if (currentUser.is_admin) {
             el.classList.remove('hidden');
-            el.setAttribute('aria-hidden', 'false');
         } else {
             el.classList.add('hidden');
-            el.setAttribute('aria-hidden', 'true');
         }
     });
     
@@ -175,15 +177,11 @@ function showMainScreen() {
 
 function switchView(viewName) {
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(view => {
-        view.classList.add('hidden');
-        view.setAttribute('aria-hidden', 'true');
-    });
+    document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
     
     document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
     const activeView = document.getElementById(`${viewName}-view`);
     activeView.classList.remove('hidden');
-    activeView.setAttribute('aria-hidden', 'false');
     
     // Load data for the view
     if (viewName === 'all-standards') {
@@ -501,10 +499,8 @@ function checkOnlineStatus() {
     function updateStatus() {
         if (navigator.onLine) {
             indicator.classList.add('hidden');
-            indicator.setAttribute('aria-hidden', 'true');
         } else {
             indicator.classList.remove('hidden');
-            indicator.setAttribute('aria-hidden', 'false');
         }
     }
     

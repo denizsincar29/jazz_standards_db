@@ -13,7 +13,7 @@
 <body>
     <div id="app">
         <!-- Login/Register Screen -->
-        <div id="auth-screen" class="screen" aria-hidden="false">
+        <div id="auth-screen" class="screen">
             <div class="container">
                 <h1>🎷 Jazz Standards DB</h1>
                 <div class="tabs">
@@ -41,7 +41,7 @@
         </div>
 
         <!-- Main App Screen -->
-        <div id="main-screen" class="screen hidden" aria-hidden="true">
+        <div id="main-screen" class="screen hidden">
             <!-- Header -->
             <header>
                 <h1>🎷 Jazz Standards DB</h1>
@@ -56,11 +56,11 @@
                 <button class="nav-btn active" data-view="my-standards">My Standards</button>
                 <button class="nav-btn" data-view="all-standards">All Standards</button>
                 <button class="nav-btn" data-view="categories">Categories</button>
-                <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true">⏳ Pending Approvals</button>
+                <button class="nav-btn admin-only hidden" data-view="pending">⏳ Pending Approvals</button>
             </nav>
 
             <!-- My Standards View -->
-            <div id="my-standards-view" class="view active" aria-hidden="false">
+            <div id="my-standards-view" class="view active">
                 <div class="container">
                     <h2>My Standards</h2>
                     <div id="standards-by-category"></div>
@@ -68,7 +68,7 @@
             </div>
 
             <!-- All Standards View -->
-            <div id="all-standards-view" class="view hidden" aria-hidden="true">
+            <div id="all-standards-view" class="view hidden">
                 <div class="container">
                     <h2>All Standards</h2>
                     <div class="search-controls">
@@ -97,7 +97,7 @@
             </div>
 
             <!-- Pending Standards View (Admin Only) -->
-            <div id="pending-view" class="view hidden admin-only" aria-hidden="true">
+            <div id="pending-view" class="view hidden admin-only">
                 <div class="container">
                     <h2>⏳ Pending Approvals</h2>
                     <p style="color: #aaa; margin-bottom: 20px;">Review and approve/reject standards submitted by users.</p>
@@ -106,7 +106,7 @@
             </div>
 
             <!-- Categories View -->
-            <div id="categories-view" class="view hidden" aria-hidden="true">
+            <div id="categories-view" class="view hidden">
                 <div class="container">
                     <h2>My Categories</h2>
                     <button id="add-category-btn">+ Add Category</button>
@@ -116,7 +116,7 @@
         </div>
 
         <!-- Modals -->
-        <div id="add-standard-modal" class="modal hidden" aria-hidden="true">
+        <div id="add-standard-modal" class="modal hidden">
             <div class="modal-content">
                 <h3>Add Jazz Standard</h3>
                 <form id="add-standard-form">
@@ -147,7 +147,7 @@
             </div>
         </div>
 
-        <div id="add-category-modal" class="modal hidden" aria-hidden="true">
+        <div id="add-category-modal" class="modal hidden">
             <div class="modal-content">
                 <h3>Add Category</h3>
                 <form id="add-category-form">
@@ -162,7 +162,7 @@
         </div>
     </div>
 
-    <div id="offline-indicator" class="hidden" aria-hidden="true">Offline</div>
+    <div id="offline-indicator" class="hidden">Offline</div>
 
     <script src="static/js/api.js"></script>
     <script src="static/js/app.js"></script>
