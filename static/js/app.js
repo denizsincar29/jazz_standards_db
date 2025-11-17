@@ -5,26 +5,65 @@ let myStandards = [];
 let categories = [];
 let currentPage = 1;
 
+// Audio context for beeps
+let audioContext = null;
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+// Simple beep function for debug alerts
+function debugBeep(frequency = 800, duration = 100) {
+    try {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration / 1000);
+    } catch (error) {
+        console.warn('Audio not available:', error);
+    }
+}
+
 // Initialize app
 async function init() {
+    console.log('[INIT] 🚀 Starting Jazz Standards DB app initialization');
     const token = API.getToken();
+    console.log('[INIT] 🔑 Token exists:', !!token);
     
     if (token) {
         try {
+            console.log('[INIT] 👤 Fetching user data...');
             currentUser = await API.getMe();
+            console.log('[INIT] ✅ User loaded:', currentUser.name, '- Admin:', currentUser.is_admin);
             showMainScreen();
             await loadMyStandards();
         } catch (error) {
-            console.error('Failed to load user:', error);
+            console.error('[INIT] ❌ Failed to load user:', error);
             API.clearToken();
             showAuthScreen();
         }
     } else {
+        console.log('[INIT] 🔓 No token found, showing auth screen');
         showAuthScreen();
     }
     
+    console.log('[INIT] 🎛️ Setting up event listeners...');
     setupEventListeners();
+    console.log('[INIT] 🌐 Checking online status...');
     checkOnlineStatus();
+    console.log('[INIT] ✅ App initialization complete');
 }
 
 // Setup event listeners
@@ -47,9 +86,14 @@ function setupEventListeners() {
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
     
     // Navigation
-    document.querySelectorAll('.nav-btn').forEach(btn => {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    console.log('[INIT] 🎯 Found', navButtons.length, 'navigation buttons');
+    navButtons.forEach((btn, index) => {
+        console.log('[INIT] 🎯 Nav button', index, '- view:', btn.dataset.view, 'text:', btn.textContent.trim());
         btn.addEventListener('click', (e) => {
+            debugBeep(1200, 60); // High beep for navigation
             const view = e.target.dataset.view;
+            console.log('[NAV CLICK] 🖱️ Navigation button clicked - view:', view);
             switchView(view);
         });
     });
@@ -60,26 +104,30 @@ function setupEventListeners() {
     
     // Add standard/category buttons
     document.getElementById('add-standard-btn').addEventListener('click', () => {
-        console.log('[BUTTON CLICK] Add Standard button clicked');
+        debugBeep(1400, 100); // High beep for modal open
+        console.log('[BUTTON CLICK] 🎵 Add Standard button clicked');
         showElement('add-standard-modal');
         // Focus the first input field for accessibility
         setTimeout(() => {
             const firstInput = document.getElementById('new-standard-title');
             if (firstInput) {
-                console.log('[FOCUS] Attempting to focus first input');
+                console.log('[FOCUS] 🎯 Attempting to focus first input');
                 firstInput.focus();
+                console.log('[FOCUS] ✅ First input focused');
             }
         }, 100);
     });
     document.getElementById('add-category-btn').addEventListener('click', () => {
-        console.log('[BUTTON CLICK] Add Category button clicked');
+        debugBeep(1400, 100); // High beep for modal open
+        console.log('[BUTTON CLICK] 🎵 Add Category button clicked');
         showElement('add-category-modal');
         // Focus the first input field for accessibility
         setTimeout(() => {
             const firstInput = document.getElementById('new-category-name');
             if (firstInput) {
-                console.log('[FOCUS] Attempting to focus first input');
+                console.log('[FOCUS] 🎯 Attempting to focus first input');
                 firstInput.focus();
+                console.log('[FOCUS] ✅ First input focused');
             }
         }, 100);
     });
@@ -91,11 +139,12 @@ function setupEventListeners() {
     // Modal cancel buttons
     document.querySelectorAll('.modal .cancel').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            debugBeep(500, 100); // Lower beep for modal close
             const modal = e.target.closest('.modal');
             if (modal) {
-                console.log('[MODAL CANCEL] Hiding modal:', modal.id);
+                console.log('[MODAL CANCEL] 🚫 Hiding modal:', modal.id);
                 modal.classList.add('hidden');
-                console.log('[MODAL CANCEL] Modal hidden, classList:', modal.classList.toString());
+                console.log('[MODAL CANCEL] ✅ Modal hidden, classList:', modal.classList.toString());
             }
         });
     });
@@ -150,32 +199,38 @@ async function handleLogout() {
 function hideElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
-        console.log('[HIDE]', elementId, 'classList before:', element.classList.toString());
+        debugBeep(600, 80); // Lower frequency beep for hide
+        console.log('[HIDE] 🔽', elementId, 'classList before:', element.classList.toString());
         element.classList.add('hidden');
-        console.log('[HIDE]', elementId, 'classList after:', element.classList.toString(), 'display:', window.getComputedStyle(element).display);
+        console.log('[HIDE] 🔽', elementId, 'classList after:', element.classList.toString(), 'display:', window.getComputedStyle(element).display);
     } else {
-        console.warn('[HIDE]', elementId, 'element not found');
+        debugBeep(400, 150); // Even lower beep for error
+        console.warn('[HIDE] ⚠️', elementId, 'element not found');
     }
 }
 
 function showElement(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
-        console.log('[SHOW]', elementId, 'classList before:', element.classList.toString());
+        debugBeep(1000, 80); // Higher frequency beep for show
+        console.log('[SHOW] 🔼', elementId, 'classList before:', element.classList.toString());
         element.classList.remove('hidden');
-        console.log('[SHOW]', elementId, 'classList after:', element.classList.toString(), 'display:', window.getComputedStyle(element).display);
+        console.log('[SHOW] 🔼', elementId, 'classList after:', element.classList.toString(), 'display:', window.getComputedStyle(element).display);
     } else {
-        console.warn('[SHOW]', elementId, 'element not found');
+        debugBeep(400, 150); // Even lower beep for error
+        console.warn('[SHOW] ⚠️', elementId, 'element not found');
     }
 }
 
 // Screen switching
 function showAuthScreen() {
+    console.log('[SCREEN] 🔓 Showing auth screen');
     showElement('auth-screen');
     hideElement('main-screen');
 }
 
 function showMainScreen() {
+    console.log('[SCREEN] 🏠 Showing main screen');
     hideElement('auth-screen');
     showElement('main-screen');
     
@@ -183,40 +238,75 @@ function showMainScreen() {
     const userNameEl = document.getElementById('user-name');
     if (currentUser.is_admin) {
         userNameEl.innerHTML = `${currentUser.name} <span class="admin-badge">ADMIN</span>`;
+        console.log('[SCREEN] 👑 Admin badge added for:', currentUser.name);
     } else {
         userNameEl.textContent = currentUser.name;
+        console.log('[SCREEN] 👤 Regular user:', currentUser.name);
     }
     
     // Show/hide admin controls
     const adminElements = document.querySelectorAll('.admin-only');
+    console.log('[SCREEN] 🔧 Found', adminElements.length, 'admin-only elements');
     adminElements.forEach(el => {
         if (currentUser.is_admin) {
             el.classList.remove('hidden');
+            console.log('[SCREEN] 👑 Showing admin element:', el.id || el.className);
         } else {
             el.classList.add('hidden');
+            console.log('[SCREEN] 🚫 Hiding admin element:', el.id || el.className);
         }
     });
     
     // Load pending standards if admin
     if (currentUser.is_admin) {
+        console.log('[SCREEN] 📋 Loading pending standards for admin');
         loadPendingStandards();
     }
 }
 
 function switchView(viewName) {
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
+    console.log('[SWITCH VIEW] 🔄 Switching to view:', viewName);
     
-    document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
+    // Remove active from all nav buttons
+    const navButtons = document.querySelectorAll('.nav-btn');
+    console.log('[SWITCH VIEW] 🔄 Found', navButtons.length, 'nav buttons to deactivate');
+    navButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Hide all views
+    const allViews = document.querySelectorAll('.view');
+    console.log('[SWITCH VIEW] 🔄 Found', allViews.length, 'views to hide');
+    allViews.forEach(view => {
+        console.log('[SWITCH VIEW] 🔄 Hiding view:', view.id);
+        view.classList.add('hidden');
+    });
+    
+    // Activate the selected nav button
+    const navBtn = document.querySelector(`[data-view="${viewName}"]`);
+    if (navBtn) {
+        navBtn.classList.add('active');
+        console.log('[SWITCH VIEW] ✅ Activated nav button for:', viewName);
+    } else {
+        console.warn('[SWITCH VIEW] ⚠️ Nav button not found for:', viewName);
+    }
+    
+    // Show the selected view
     const activeView = document.getElementById(`${viewName}-view`);
-    activeView.classList.remove('hidden');
+    if (activeView) {
+        activeView.classList.remove('hidden');
+        console.log('[SWITCH VIEW] ✅ Showing view:', viewName, '- classList:', activeView.classList.toString());
+    } else {
+        console.error('[SWITCH VIEW] ❌ View not found:', `${viewName}-view`);
+    }
     
     // Load data for the view
     if (viewName === 'all-standards') {
+        console.log('[SWITCH VIEW] 📊 Loading all standards data');
         loadAllStandards();
     } else if (viewName === 'categories') {
+        console.log('[SWITCH VIEW] 📊 Loading categories data');
         loadCategories();
     } else if (viewName === 'pending') {
+        console.log('[SWITCH VIEW] 📊 Loading pending standards data');
         loadPendingStandards(1);
     }
 }
@@ -565,4 +655,8 @@ async function rejectStandard(id) {
 }
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', init);
+console.log('[APP] 📱 app.js loaded, registering DOMContentLoaded listener');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[APP] 🎬 DOMContentLoaded event fired, calling init()');
+    init();
+});
