@@ -43,13 +43,13 @@ type User struct {
 }
 
 type Standard struct {
-	ID             uint   `json:"id"`
-	Title          string `json:"title"`
-	Composer       string `json:"composer"`
-	Style          string `json:"style"`
-	Key            string `json:"key,omitempty"`
-	AdditionalNote string `json:"additional_note,omitempty"`
-	Status         string `json:"status,omitempty"`
+	ID              uint   `json:"id"`
+	Title           string `json:"title"`
+	Composer        string `json:"composer"`
+	Style           string `json:"style"`
+	Key             string `json:"key,omitempty"`
+	AdditionalNote  string `json:"additional_note,omitempty"`
+	Status          string `json:"status,omitempty"`
 	PopularityCount int64  `json:"popularity_count,omitempty"`
 }
 
@@ -60,40 +60,40 @@ type Category struct {
 }
 
 type UserStandard struct {
-	UserID         uint       `json:"user_id"`
-	JazzStandardID uint       `json:"jazz_standard_id"`
-	CategoryID     *uint      `json:"category_id,omitempty"`
-	Notes          string     `json:"notes,omitempty"`
-	Proficiency    string     `json:"proficiency"`
-	Category       *Category  `json:"category,omitempty"`
-	JazzStandard   *Standard  `json:"jazz_standard,omitempty"`
+	UserID         uint      `json:"user_id"`
+	JazzStandardID uint      `json:"jazz_standard_id"`
+	CategoryID     *uint     `json:"category_id,omitempty"`
+	Notes          string    `json:"notes,omitempty"`
+	Proficiency    string    `json:"proficiency"`
+	Category       *Category `json:"category,omitempty"`
+	JazzStandard   *Standard `json:"jazz_standard,omitempty"`
 }
 
 type PersonalPiece struct {
-	ID           uint     `json:"id"`
-	UserID       uint     `json:"user_id"`
-	Title        string   `json:"title"`
-	Composer     string   `json:"composer,omitempty"`
-	Style        string   `json:"style,omitempty"`
-	Key          string   `json:"key,omitempty"`
-	Notes        string   `json:"notes,omitempty"`
-	IrealProLink string   `json:"ireal_pro_link,omitempty"`
-	IsPublic     bool     `json:"is_public"`
-	User         *User    `json:"user,omitempty"`
+	ID           uint   `json:"id"`
+	UserID       uint   `json:"user_id"`
+	Title        string `json:"title"`
+	Composer     string `json:"composer,omitempty"`
+	Style        string `json:"style,omitempty"`
+	Key          string `json:"key,omitempty"`
+	Notes        string `json:"notes,omitempty"`
+	IrealProLink string `json:"ireal_pro_link,omitempty"`
+	IsPublic     bool   `json:"is_public"`
+	User         *User  `json:"user,omitempty"`
 }
 
 type ComposedTune struct {
-	ID           uint     `json:"id"`
-	UserID       uint     `json:"user_id"`
-	ShareID      string   `json:"share_id"`
-	Title        string   `json:"title"`
-	Composer     string   `json:"composer"`
-	Style        string   `json:"style,omitempty"`
-	Key          string   `json:"key,omitempty"`
-	Description  string   `json:"description,omitempty"`
-	IrealProLink string   `json:"ireal_pro_link,omitempty"`
-	IsPublic     bool     `json:"is_public"`
-	User         *User    `json:"user,omitempty"`
+	ID           uint   `json:"id"`
+	UserID       uint   `json:"user_id"`
+	ShareID      string `json:"share_id"`
+	Title        string `json:"title"`
+	Composer     string `json:"composer"`
+	Style        string `json:"style,omitempty"`
+	Key          string `json:"key,omitempty"`
+	Description  string `json:"description,omitempty"`
+	IrealProLink string `json:"ireal_pro_link,omitempty"`
+	IsPublic     bool   `json:"is_public"`
+	User         *User  `json:"user,omitempty"`
 }
 
 type SharedTuneResponse struct {
@@ -109,9 +109,9 @@ type StandardsPage struct {
 }
 
 type MyStandardsResponse struct {
-	Standards []UserStandard              `json:"standards"`
-	Grouped   map[string][]UserStandard   `json:"grouped"`
-	Total     int64                      `json:"total"`
+	Standards []UserStandard            `json:"standards"`
+	Grouped   map[string][]UserStandard `json:"grouped"`
+	Total     int64                     `json:"total"`
 }
 
 type PendingResponse struct {
@@ -122,10 +122,10 @@ type PendingResponse struct {
 }
 
 type PracticeLog struct {
-	ID          uint      `json:"id"`
-	DurationMin int       `json:"duration_min"`
-	Notes       string    `json:"notes,omitempty"`
-	PracticedAt time.Time `json:"practiced_at"`
+	ID           uint      `json:"id"`
+	DurationMin  int       `json:"duration_min"`
+	Notes        string    `json:"notes,omitempty"`
+	PracticedAt  time.Time `json:"practiced_at"`
 	JazzStandard *Standard `json:"jazz_standard,omitempty"`
 }
 
@@ -336,12 +336,12 @@ func (c *Client) ListStandards(page, limit int, search, style string) (*Standard
 
 func (c *Client) CreateStandard(title, composer, style, note, key, ireal string) error {
 	body := map[string]any{
-		"title":            title,
-		"composer":         composer,
-		"style":            style,
-		"additional_note":  note,
-		"key":              key,
-		"ireal_pro_link":   ireal,
+		"title":           title,
+		"composer":        composer,
+		"style":           style,
+		"additional_note": note,
+		"key":             key,
+		"ireal_pro_link":  ireal,
 	}
 	data, _, err := c.requestBytes(http.MethodPost, "/jazz_standards", body)
 	if err != nil {
