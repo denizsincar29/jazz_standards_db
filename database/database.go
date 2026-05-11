@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/denizsincar29/jazz_standards_db/config"
 	"github.com/denizsincar29/jazz_standards_db/models"
@@ -35,6 +36,17 @@ func Connect() error {
 
 	if err := AutoMigrate(); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	if os.Getenv("VALIDATE_DB_ON_STARTUP") != "" {
+		report, err := ValidateIntegrity()
+		if err != nil {
+			return fmt.Errorf("failed to validate database integrity: %w", err)
+		}
+		if !report.OK() {
+			return fmt.Errorf("database integrity validation failed:\n%s", report.String())
+		}
+		log.Println("Database integrity validation passed")
 	}
 
 	return nil

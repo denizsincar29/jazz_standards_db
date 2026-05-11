@@ -81,8 +81,6 @@ func newRouter() *mux.Router {
 	api.HandleFunc("/users/me", middleware.RequireAuth(handlers.UpdateMe)).Methods("PATCH")
 	api.HandleFunc("/users", middleware.RequireAdmin(handlers.ListUsers)).Methods("GET")
 	api.HandleFunc("/users/{id:[0-9]+}", middleware.RequireAuth(handlers.DeleteUser)).Methods("DELETE")
-	api.HandleFunc("/users/{username}/standards",
-		middleware.RequireAuth(handlers.GetPublicUserStandards)).Methods("GET")
 
 	api.HandleFunc("/users/me/passkeys", middleware.RequireAuth(handlers.CreatePassKey)).Methods("POST")
 	api.HandleFunc("/users/me/passkeys", middleware.RequireAuth(handlers.ListPassKeys)).Methods("GET")
@@ -113,6 +111,8 @@ func newRouter() *mux.Router {
 		middleware.RequireAuth(handlers.LogPractice)).Methods("POST")
 	api.HandleFunc("/users/me/practice",
 		middleware.RequireAuth(handlers.ListPracticeLogs)).Methods("GET")
+	api.HandleFunc("/users/{username}/standards",
+		middleware.RequireAuth(handlers.GetPublicUserStandards)).Methods("GET")
 
 	api.HandleFunc("/users/me/categories", middleware.RequireAuth(handlers.ListCategories)).Methods("GET")
 	api.HandleFunc("/users/me/categories", middleware.RequireAuth(handlers.CreateCategory)).Methods("POST")

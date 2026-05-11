@@ -21,6 +21,14 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+func cookiePath() string {
+	path := "/"
+	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
+		path = config.AppConfig.BasePath + "/"
+	}
+	return path
+}
+
 // Register creates a new user account
 func Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
@@ -70,17 +78,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get cookie path from config
-	cookiePath := "/"
-	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
-		cookiePath = config.AppConfig.BasePath + "/"
-	}
-
 	// Set cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     cookiePath,
+		Path:     cookiePath(),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -123,17 +125,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get cookie path from config
-	cookiePath := "/"
-	if config.AppConfig.BasePath != "" && config.AppConfig.BasePath != "/" {
-		cookiePath = config.AppConfig.BasePath + "/"
-	}
-
 	// Set cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     cookiePath,
+		Path:     cookiePath(),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
@@ -147,7 +143,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
-		Path:     "/",
+		Path:     cookiePath(),
 		HttpOnly: true,
 		MaxAge:   -1,
 	})

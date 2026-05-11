@@ -71,10 +71,6 @@ func registerRoutes(r *mux.Router, basePath string) {
 	api.HandleFunc("/users", middleware.RequireAdmin(handlers.ListUsers)).Methods("GET")
 	api.HandleFunc("/users/{id:[0-9]+}", middleware.RequireAuth(handlers.DeleteUser)).Methods("DELETE")
 
-	// Public profile – another user's list (only if public_profile=true)
-	api.HandleFunc("/users/{username}/standards",
-		middleware.RequireAuth(handlers.GetPublicUserStandards)).Methods("GET")
-
 	// ── Pass Keys ─────────────────────────────────────────────────────────────
 	api.HandleFunc("/users/me/passkeys", middleware.RequireAuth(handlers.CreatePassKey)).Methods("POST")
 	api.HandleFunc("/users/me/passkeys", middleware.RequireAuth(handlers.ListPassKeys)).Methods("GET")
@@ -104,6 +100,10 @@ func registerRoutes(r *mux.Router, basePath string) {
 		middleware.RequireAuth(handlers.UpdateUserStandard)).Methods("PUT")
 	api.HandleFunc("/users/me/standards/{standard_id:[0-9]+}",
 		middleware.RequireAuth(handlers.DeleteUserStandard)).Methods("DELETE")
+
+	// Public profile – another user's list (only if public_profile=true)
+	api.HandleFunc("/users/{username}/standards",
+		middleware.RequireAuth(handlers.GetPublicUserStandards)).Methods("GET")
 
 	// ── Practice Logs ─────────────────────────────────────────────────────────
 	api.HandleFunc("/users/me/standards/{standard_id:[0-9]+}/practice",

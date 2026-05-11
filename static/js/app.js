@@ -202,6 +202,12 @@ async function loadMyStandards() {
         myStandards = data.standards || [];
         renderMyStandards(data.grouped || {});
     } catch (error) {
+        if (error.message === 'Unauthorized' || error.message === 'User not found') {
+            API.clearToken();
+            currentUser = null;
+            showAuthScreen();
+            return;
+        }
         console.error('Failed to load my standards:', error);
     }
 }
