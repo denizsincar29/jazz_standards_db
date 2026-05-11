@@ -26,6 +26,11 @@ body {
     display: none;
 }
 
+#auth-screen.hidden,
+#main-screen.hidden {
+    display: none;
+}
+
 /* Auth Screen */
 #auth-screen {
     display: flex;
