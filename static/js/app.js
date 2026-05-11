@@ -5,6 +5,21 @@ let myStandards = [];
 let categories = [];
 let currentPage = 1;
 
+// Utility to escape HTML when rendering strings into templates
+function escapeHtml(str) {
+    if (!str && str !== 0) return '';
+    return String(str).replace(/[&<>"'`]/g, function (s) {
+        return ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '`': '&#96;'
+        })[s];
+    });
+}
+
 // Initialize app
 async function init() {
     const token = API.getToken();
@@ -312,21 +327,25 @@ function renderAllStandards(data) {
             statusBadge = '<span style="color: #dc3545; font-weight: bold;">❌ Rejected</span>';
         }
         
-        const actionBtn = isKnown
-            ? `<button class="btn-remove" onclick="removeStandard(${standard.id})">Remove</button>`
-            : `<button class="btn-know" onclick="addStandard(${standard.id})">I Know This</button>`;
-        
+        const addBtn = `<button class="btn-know" onclick="addStandard(${standard.id})" aria-label="Add ${escapeHtml(standard.title)}">I Know This</button>`;
+        const removeBtn = `<button class="btn-remove" onclick="removeStandard(${standard.id})" aria-label="Remove ${escapeHtml(standard.title)}">Remove</button>`;
+        const deleteBtn = `<button class="btn-remove" onclick="deleteStandard(${standard.id})" aria-label="Delete ${escapeHtml(standard.title)}">Delete</button>`;
+        const actionBtn = isKnown ? removeBtn : addBtn;
+
+        // Ensure the title has an id for aria-labelledby and the item is focusable
+        const titleId = `standard-title-${standard.id}`;
+
         return `
-            <div class="standard-item">
+            <div class="standard-item" tabindex="0" role="article" aria-labelledby="${titleId}">
                 <div class="standard-info">
-                    <h4>${standard.title} ${statusBadge}</h4>
-                    <p>${standard.composer} - ${standard.style}</p>
-                    ${standard.additional_note ? `<p><em>${standard.additional_note}</em></p>` : ''}
-                    ${standard.creator ? `<p style="font-size: 0.85em; color: #aaa;">Submitted by: ${standard.creator.name}</p>` : ''}
+                    <h4 id="${titleId}">${escapeHtml(standard.title)} ${statusBadge}</h4>
+                    <p>${escapeHtml(standard.composer)} - ${escapeHtml(standard.style)}</p>
+                    ${standard.additional_note ? `<p><em>${escapeHtml(standard.additional_note)}</em></p>` : ''}
+                    ${standard.creator ? `<p style="font-size: 0.85em; color: #aaa;">Submitted by: ${escapeHtml(standard.creator.name)}</p>` : ''}
                 </div>
                 <div class="standard-actions">
                     ${!isPending && !isRejected ? actionBtn : ''}
-                    ${currentUser.is_admin ? `<button class="btn-remove" onclick="deleteStandard(${standard.id})">Delete</button>` : ''}
+                    ${currentUser.is_admin ? deleteBtn : ''}
                 </div>
             </div>
         `;
