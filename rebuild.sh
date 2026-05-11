@@ -48,6 +48,9 @@ main() {
     export GOFLAGS="-mod=mod"
     go build -o jazz_standards_db .
 
+    info "Stopping ${SERVICE_NAME}"
+    sudo systemctl stop "$SERVICE_NAME"
+
     info "Installing binary to ${install_dir}"
     sudo mkdir -p "$install_dir"
     sudo cp jazz_standards_db "$install_dir/jazz_standards_db"
