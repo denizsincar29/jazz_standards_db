@@ -2,14 +2,19 @@
 # ============================================================
 # Jazz Standards DB — interactive installer
 # ============================================================
-# What this script does:
-#   1. Checks dependencies (Go, PostgreSQL)
-#   2. Asks for every .env value interactively (with sensible defaults)
-#   3. Creates the PostgreSQL role + database (via sudo -u postgres) if absent
-#   4. Writes .env
-#   5. Builds the binary
-#   6. Installs a systemd service
-#   7. Writes a ready-to-paste Apache ProxyPass snippet
+# Steps:
+#   1. Check dependencies (go, psql, sudo, systemctl, curl, jq)
+#   2. Interactively collect every .env field
+#   3. Create PostgreSQL role + database (sudo -u postgres) if absent
+#   4. Write .env (chmod 600)
+#   5. Build the binary
+#   6. Install binary + assets to INSTALL_DIR
+#   7. Create & enable systemd service
+#   8. Start the service and wait for it to be healthy
+#   9. Create the first admin user via the API
+#  10. Seed the 298 jazz standards via the bulk-import API
+#  11. Write apache_proxy.conf (the two ProxyPass lines)
+#  12. Print a final summary
 # ============================================================
 
 set -euo pipefail
@@ -18,15 +23,15 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 
-info()    { echo -e "${CYAN}[INFO]${RESET}  $*"; }
-success() { echo -e "${GREEN}[OK]${RESET}    $*"; }
-warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
-error()   { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
-die()     { error "$*"; exit 1; }
+info()    { echo -e "${CYAN}[•]${RESET} $*"; }
+success() { echo -e "${GREEN}[✓]${RESET} $*"; }
+warn()    { echo -e "${YELLOW}[!]${RESET} $*"; }
+die()     { echo -e "${RED}[✗]${RESET} $*" >&2; exit 1; }
 bold()    { echo -e "${BOLD}$*${RESET}"; }
+step()    { echo ""; bold "── $* ──────────────────────────────────────────────────"; }
 
-# ── ask helpers ─────────────────────────────────────────────
-# ask VAR "Prompt" "default"
+# ── prompt helpers ───────────────────────────────────────────
+# ask VAR "Prompt" "default"  (required, loops until non-empty)
 ask() {
     local var="$1" prompt="$2" default="$3"
     local hint=""
@@ -35,17 +40,13 @@ ask() {
         echo -en "${BOLD}${prompt}${RESET}${hint}: "
         read -r value
         value="${value:-$default}"
-        if [[ -z "$value" ]]; then
-            warn "This field is required."
-        else
-            eval "$var=\"\$value\""
-            return
-        fi
+        [[ -n "$value" ]] && { eval "$var=\"\$value\""; return; }
+        warn "This field is required."
     done
 }
 
-# ask_optional VAR "Prompt" "default"  – empty is accepted
-ask_optional() {
+# ask_opt VAR "Prompt" "default"  (empty accepted)
+ask_opt() {
     local var="$1" prompt="$2" default="$3"
     local hint=""
     [[ -n "$default" ]] && hint=" [${CYAN}${default}${RESET}]"
@@ -54,25 +55,28 @@ ask_optional() {
     eval "$var=\"\${value:-\$default}\""
 }
 
-# ask_secret VAR "Prompt"  – hides input
+# ask_secret VAR "Prompt"
 ask_secret() {
     local var="$1" prompt="$2"
     while true; do
         echo -en "${BOLD}${prompt}${RESET}: "
-        read -rs value
-        echo
-        if [[ -z "$value" ]]; then
-            warn "This field is required."
-        else
-            eval "$var=\"\$value\""
-            return
-        fi
+        read -rs value; echo
+        [[ -n "$value" ]] && { eval "$var=\"\$value\""; return; }
+        warn "This field is required."
     done
 }
 
-# ask_yesno VAR "Prompt" "y|n"
-ask_yesno() {
-    local var="$1" prompt="$2" default="${3:-n}"
+# ask_secret_opt VAR "Prompt"  (empty accepted)
+ask_secret_opt() {
+    local var="$1" prompt="$2"
+    echo -en "${BOLD}${prompt}${RESET} (leave blank to skip): "
+    read -rs value; echo
+    eval "$var=\"\$value\""
+}
+
+# ask_yn VAR "Prompt" default(y|n)
+ask_yn() {
+    local var="$1" prompt="$2" default="${3:-y}"
     local hint="[y/n, default: ${default}]"
     while true; do
         echo -en "${BOLD}${prompt}${RESET} ${hint}: "
@@ -86,93 +90,103 @@ ask_yesno() {
     done
 }
 
-# ── locate script directory (repo root) ─────────────────────
+# ── locate repo root ─────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+SEED_FILE="${SCRIPT_DIR}/scripts/standards_seed.json"
+
 # ============================================================
-bold ""
-bold "╔══════════════════════════════════════════════════════╗"
-bold "║         Jazz Standards DB  —  Installer              ║"
-bold "╚══════════════════════════════════════════════════════╝"
+echo ""
+bold "╔══════════════════════════════════════════════════════════╗"
+bold "║        Jazz Standards DB  —  Interactive Installer       ║"
+bold "╚══════════════════════════════════════════════════════════╝"
 echo ""
 
 # ============================================================
 # 1. Dependency check
 # ============================================================
-info "Checking dependencies…"
+step "Checking dependencies"
 
-check_cmd() {
+need() {
     if command -v "$1" &>/dev/null; then
-        success "$1 found: $(command -v "$1")"
+        success "$1  →  $(command -v "$1")"
     else
         die "$1 not found. Please install it and re-run."
     fi
 }
 
-check_cmd go
-check_cmd psql
-check_cmd sudo
-check_cmd systemctl
+need go
+need psql
+need sudo
+need systemctl
+need curl
+need jq
 
-GO_VERSION=$(go version | awk '{print $3}')
-info "Go version: $GO_VERSION"
-echo ""
+info "Go version: $(go version | awk '{print $3}')"
 
 # ============================================================
-# 2. Collect configuration interactively
+# 2. Collect configuration
 # ============================================================
-bold "── Database ────────────────────────────────────────────"
-ask         DB_HOST     "PostgreSQL host"          "localhost"
-ask         DB_PORT     "PostgreSQL port"          "5432"
-ask         DB_NAME     "Database name"            "jazz"
-ask         DB_USER     "Database role/user"       "jazz"
+step "Database settings"
+
+ask     DB_HOST     "PostgreSQL host"     "localhost"
+ask     DB_PORT     "PostgreSQL port"     "5432"
+ask     DB_NAME     "Database name"       "jazz"
+ask     DB_USER     "Database role/user"  "jazz"
 ask_secret  DB_PASSWORD "Database password"
-echo ""
 
-bold "── Application ─────────────────────────────────────────"
-ask         APP_PORT    "HTTP listen port"         "8000"
-ask         APP_ENV     "Environment (development|production)" "production"
+step "Application settings"
 
-# JWT secret: offer to generate one
-ask_yesno GENJWT "Generate a random JWT secret automatically?" "y"
+ask     APP_PORT "HTTP listen port"                              "8000"
+ask     APP_ENV  "Environment (development|production)"          "production"
+
+ask_yn GENJWT "Auto-generate a secure JWT secret?" "y"
 if [[ "$GENJWT" == "y" ]]; then
-    JWT_SECRET="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 48)"
-    success "Generated JWT secret."
+    JWT_SECRET="$(openssl rand -hex 32 2>/dev/null \
+        || head -c 48 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 48)"
+    success "JWT secret generated."
 else
     ask_secret JWT_SECRET "JWT secret (long random string)"
 fi
-echo ""
 
-bold "── Base path (reverse proxy) ───────────────────────────"
-echo "  Leave empty to serve from /  (direct access, no proxy)"
-echo "  Set e.g. /jazz to serve at https://example.com/jazz"
-ask_optional BASE_PATH "Base path" ""
+step "Reverse proxy / base path"
+echo "  Leave empty to serve from /  (direct, no proxy sub-path)"
+echo "  Enter e.g.  /jazz  to serve at  https://example.com/jazz"
+ask_opt BASE_PATH "Base path" ""
 
-# Normalise base path: ensure leading /, no trailing /
-if [[ -n "$BASE_PATH" ]]; then
+# Normalise: leading slash, no trailing slash
+if [[ -n "$BASE_PATH" && "$BASE_PATH" != "/" ]]; then
     [[ "${BASE_PATH:0:1}" != "/" ]] && BASE_PATH="/$BASE_PATH"
     BASE_PATH="${BASE_PATH%/}"
 fi
-echo ""
 
-bold "── ntfy push notifications ─────────────────────────────"
-echo "  Admins receive a push alert when a user submits a standard."
+step "ntfy push notifications"
+echo "  Admins receive a push when a user submits a standard for review."
 echo "  Leave NTFY_TOPIC empty to disable."
-ask_optional NTFY_URL   "ntfy server URL"   "https://ntfy.sh"
-ask_optional NTFY_TOPIC "ntfy topic name"   ""
-ask_optional NTFY_TOKEN "ntfy Bearer token (if protected)" ""
-echo ""
+ask_opt     NTFY_URL   "ntfy server URL"    "https://ntfy.sh"
+ask_opt     NTFY_TOPIC "ntfy topic name"    ""
+ask_secret_opt NTFY_TOKEN "ntfy Bearer token (if your topic is protected)"
 
-bold "── Install paths ───────────────────────────────────────"
-ask         INSTALL_DIR "Binary install directory" "/opt/jazz_standards_db"
-ask         SERVICE_USER "Run service as user"     "www-data"
-echo ""
+step "Install paths"
+ask  INSTALL_DIR  "Binary install directory"  "/opt/jazz_standards_db"
+ask  SERVICE_USER "Run service as OS user"     "www-data"
+
+step "First admin account"
+echo "  This account will be created automatically via the API."
+ask        ADMIN_USERNAME "Admin username"     "admin"
+ask        ADMIN_NAME     "Admin display name" "Administrator"
+ask_secret ADMIN_PASSWORD "Admin password"
+
+step "Seed the jazz standards database?"
+echo "  The repo ships with 298 standards (standards_seed.json)."
+echo "  They will be imported automatically after the service starts."
+ask_yn SEED_DB "Import the 298 jazz standards now?" "y"
 
 # ============================================================
-# 3. Confirm before proceeding
+# 3. Confirmation
 # ============================================================
-bold "── Summary ─────────────────────────────────────────────"
+step "Summary — please review"
 echo "  DB host:port      : ${DB_HOST}:${DB_PORT}"
 echo "  Database          : ${DB_NAME}"
 echo "  DB user           : ${DB_USER}"
@@ -182,92 +196,88 @@ echo "  Environment       : ${APP_ENV}"
 echo "  ntfy topic        : ${NTFY_TOPIC:-disabled}"
 echo "  Install directory : ${INSTALL_DIR}"
 echo "  Service user      : ${SERVICE_USER}"
+echo "  Admin username    : ${ADMIN_USERNAME}"
+echo "  Seed standards    : ${SEED_DB}"
 echo ""
-ask_yesno CONFIRM "Proceed with installation?" "y"
+ask_yn CONFIRM "Proceed with installation?" "y"
 [[ "$CONFIRM" != "y" ]] && { info "Aborted."; exit 0; }
-echo ""
 
 # ============================================================
 # 4. PostgreSQL — create role + database if absent
 # ============================================================
-info "Setting up PostgreSQL…"
+step "Setting up PostgreSQL"
 
-PG_SUPERUSER="postgres"
+PG_SUPER="postgres"
 
-pg_exec() {
-    sudo -u "$PG_SUPERUSER" psql -v ON_ERROR_STOP=1 -q "$@"
-}
+pg_exec() { sudo -u "$PG_SUPER" psql -v ON_ERROR_STOP=1 -q "$@"; }
 
-pg_exists_role() {
-    sudo -u "$PG_SUPERUSER" psql -tAc \
+role_exists() {
+    sudo -u "$PG_SUPER" psql -tAc \
         "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" postgres \
         2>/dev/null | grep -q 1
 }
 
-pg_exists_db() {
-    sudo -u "$PG_SUPERUSER" psql -tAc \
+db_exists() {
+    sudo -u "$PG_SUPER" psql -tAc \
         "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" postgres \
         2>/dev/null | grep -q 1
 }
 
-if pg_exists_role; then
-    info "PostgreSQL role '${DB_USER}' already exists — skipping."
+if role_exists; then
+    info "Role '${DB_USER}' already exists — skipping."
 else
-    info "Creating PostgreSQL role '${DB_USER}'…"
-    pg_exec -d postgres <<-SQL
-        CREATE ROLE "${DB_USER}" WITH LOGIN PASSWORD '${DB_PASSWORD}';
-SQL
+    info "Creating role '${DB_USER}'…"
+    pg_exec -d postgres -c \
+        "CREATE ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${DB_PASSWORD}';"
     success "Role '${DB_USER}' created."
 fi
 
-if pg_exists_db; then
+if db_exists; then
     info "Database '${DB_NAME}' already exists — skipping."
 else
     info "Creating database '${DB_NAME}'…"
-    pg_exec -d postgres <<-SQL
-        CREATE DATABASE "${DB_NAME}" OWNER "${DB_USER}";
-SQL
+    pg_exec -d postgres -c \
+        "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\";"
     success "Database '${DB_NAME}' created."
 fi
 
-# Grant just in case role was pre-existing but didn't own the DB
-pg_exec -d postgres \
-    -c "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USER}\";" \
+# Ensure privileges (idempotent)
+pg_exec -d postgres -c \
+    "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USER}\";" \
     2>/dev/null || true
 
 success "PostgreSQL ready."
-echo ""
 
 # ============================================================
 # 5. Write .env
 # ============================================================
-info "Writing .env…"
+step "Writing .env"
 
 ENV_FILE="${SCRIPT_DIR}/.env"
 
 cat > "$ENV_FILE" <<EOF
 # Generated by install.sh — $(date -u '+%Y-%m-%d %H:%M:%S UTC')
 
-# ── Database ──────────────────────────────────────────────
+# ── Database ──────────────────────────────────────────────────────
 DB_HOST=${DB_HOST}
 DB_PORT=${DB_PORT}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 DB_NAME=${DB_NAME}
 
-# ── Server ────────────────────────────────────────────────
+# ── Server ────────────────────────────────────────────────────────
 PORT=${APP_PORT}
 JWT_SECRET=${JWT_SECRET}
 ENVIRONMENT=${APP_ENV}
 
-# Sub-path when running behind a reverse proxy (e.g. /jazz).
-# Leave empty to serve from root /.
+# Sub-path when running behind a reverse proxy, e.g. /jazz
+# Leave empty to serve from root /
 BASE_PATH=${BASE_PATH}
 
-# Set any non-empty value to enable /testapi debug page.
+# Set any non-empty value to enable the /testapi debug page
 TEST_API=
 
-# ── ntfy push notifications ───────────────────────────────
+# ── ntfy push notifications ───────────────────────────────────────
 NTFY_URL=${NTFY_URL}
 NTFY_TOPIC=${NTFY_TOPIC}
 NTFY_TOKEN=${NTFY_TOKEN}
@@ -275,59 +285,55 @@ EOF
 
 chmod 600 "$ENV_FILE"
 success ".env written (permissions 600)."
-echo ""
 
 # ============================================================
 # 6. Build the binary
 # ============================================================
-info "Building Jazz Standards DB binary…"
+step "Building binary"
 
 export GONOSUMDB="*"
 export GOFLAGS="-mod=mod"
 
-if ! go build -o jazz_standards_db . 2>&1; then
-    die "Build failed. See errors above."
-fi
+info "Running go build…"
+go build -o jazz_standards_db . || die "Build failed. See errors above."
 success "Binary built: ${SCRIPT_DIR}/jazz_standards_db"
-echo ""
 
 # ============================================================
 # 7. Install to INSTALL_DIR
 # ============================================================
-info "Installing to ${INSTALL_DIR}…"
+step "Installing to ${INSTALL_DIR}"
 
 sudo mkdir -p "$INSTALL_DIR"
 sudo cp jazz_standards_db "$INSTALL_DIR/jazz_standards_db"
 sudo chmod +x "$INSTALL_DIR/jazz_standards_db"
 
-# Copy static assets and scripts
 for d in static scripts; do
-    if [[ -d "${SCRIPT_DIR}/${d}" ]]; then
-        sudo cp -r "${SCRIPT_DIR}/${d}" "${INSTALL_DIR}/${d}"
-    fi
+    [[ -d "${SCRIPT_DIR}/${d}" ]] && sudo cp -r "${SCRIPT_DIR}/${d}" "${INSTALL_DIR}/${d}"
 done
 
-# Copy .env to install dir
 sudo cp "$ENV_FILE" "${INSTALL_DIR}/.env"
 sudo chmod 600 "${INSTALL_DIR}/.env"
 
-# Ensure service user can read everything
-sudo chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || \
-    sudo chown -R "${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || \
-    warn "Could not chown ${INSTALL_DIR} to ${SERVICE_USER} — check manually."
+# Ownership — tolerate missing user gracefully
+if id "$SERVICE_USER" &>/dev/null; then
+    sudo chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null \
+        || sudo chown -R "$SERVICE_USER" "$INSTALL_DIR" 2>/dev/null \
+        || warn "Could not chown ${INSTALL_DIR} to ${SERVICE_USER} — check manually."
+else
+    warn "OS user '${SERVICE_USER}' does not exist. Binary installed but ownership unchanged."
+fi
 
 success "Installed to ${INSTALL_DIR}."
-echo ""
 
 # ============================================================
 # 8. Systemd service
 # ============================================================
-info "Creating systemd service…"
+step "Creating systemd service"
 
 SERVICE_FILE="/etc/systemd/system/jazz-standards-db.service"
 
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
-# Jazz Standards DB — generated by install.sh
+# Jazz Standards DB — generated by install.sh on $(date -u '+%Y-%m-%d %H:%M UTC')
 [Unit]
 Description=Jazz Standards Database API
 After=network.target postgresql.service
@@ -345,7 +351,7 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=jazz-standards-db
 
-# Hardening
+# Basic hardening
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
@@ -357,103 +363,195 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable jazz-standards-db.service
-success "Service installed: jazz-standards-db.service"
-echo ""
+success "Service installed and enabled: jazz-standards-db.service"
 
-# Ask whether to start the service now
-ask_yesno START_NOW "Start the service now?" "y"
-if [[ "$START_NOW" == "y" ]]; then
-    sudo systemctl restart jazz-standards-db.service
-    sleep 2
-    if sudo systemctl is-active --quiet jazz-standards-db.service; then
-        success "Service is running."
+# ── start the service ────────────────────────────────────────
+info "Starting service…"
+sudo systemctl restart jazz-standards-db.service
+
+# Wait up to 30 s for the HTTP port to open
+BASE_URL="http://localhost:${APP_PORT}${BASE_PATH}"
+HEALTH_URL="${BASE_URL}/api/jazz_standards"
+
+info "Waiting for app to be ready at ${HEALTH_URL}…"
+READY=n
+for i in $(seq 1 30); do
+    if curl -sf "${HEALTH_URL}" -o /dev/null 2>/dev/null; then
+        READY=y; break
+    fi
+    sleep 1
+done
+
+if [[ "$READY" != "y" ]]; then
+    warn "App did not respond within 30 s."
+    warn "Check: sudo journalctl -u jazz-standards-db -n 50"
+    warn "Skipping admin creation and standard seeding — run manually after fixing."
+    # Still write the Apache snippet and finish
+fi
+
+# ============================================================
+# 9. Create admin user via the API
+# ============================================================
+ADMIN_TOKEN=""
+
+if [[ "$READY" == "y" ]]; then
+    step "Creating admin user '${ADMIN_USERNAME}'"
+
+    # Register the admin account
+    REG_RESP=$(curl -sf -X POST "${BASE_URL}/api/register" \
+        -H "Content-Type: application/json" \
+        -d "{\"username\":\"${ADMIN_USERNAME}\",\"name\":\"${ADMIN_NAME}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+        2>/dev/null) || REG_RESP=""
+
+    if [[ -z "$REG_RESP" ]]; then
+        warn "Registration endpoint failed — admin may already exist. Trying login…"
     else
-        warn "Service did not start cleanly. Check: sudo journalctl -u jazz-standards-db -n 50"
+        ADMIN_TOKEN=$(echo "$REG_RESP" | jq -r '.token // empty' 2>/dev/null || true)
+        [[ -n "$ADMIN_TOKEN" ]] && success "Admin account registered."
+    fi
+
+    # If we don't have a token yet (already exists), log in
+    if [[ -z "$ADMIN_TOKEN" ]]; then
+        LOGIN_RESP=$(curl -sf -X POST "${BASE_URL}/api/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+            2>/dev/null) || LOGIN_RESP=""
+        ADMIN_TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty' 2>/dev/null || true)
+    fi
+
+    if [[ -z "$ADMIN_TOKEN" ]]; then
+        warn "Could not obtain an admin token. Skipping admin promotion and seeding."
+        warn "Create the admin manually: go run cmd/create_admin/main.go"
+    else
+        # Promote to admin in the DB (the register endpoint creates a regular user;
+        # we flip is_admin directly since there is no self-promotion endpoint)
+        info "Promoting '${ADMIN_USERNAME}' to admin in the database…"
+        sudo -u "$PG_SUPER" psql -q -d "$DB_NAME" \
+            -c "UPDATE users SET is_admin = true WHERE username = '${ADMIN_USERNAME}';" \
+            2>/dev/null || \
+        PGPASSWORD="$DB_PASSWORD" psql -q -h "$DB_HOST" -p "$DB_PORT" \
+            -U "$DB_USER" -d "$DB_NAME" \
+            -c "UPDATE users SET is_admin = true WHERE username = '${ADMIN_USERNAME}';" \
+            2>/dev/null || \
+            warn "Could not promote via psql — promote manually (see below)."
+
+        # Re-login so the token reflects the admin role (gorm reads is_admin on auth)
+        LOGIN_RESP=$(curl -sf -X POST "${BASE_URL}/api/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+            2>/dev/null) || LOGIN_RESP=""
+        FRESH_TOKEN=$(echo "$LOGIN_RESP" | jq -r '.token // empty' 2>/dev/null || true)
+        [[ -n "$FRESH_TOKEN" ]] && ADMIN_TOKEN="$FRESH_TOKEN"
+
+        success "Admin user '${ADMIN_USERNAME}' is ready."
+        info "Admin token: ${ADMIN_TOKEN}"
     fi
 fi
-echo ""
 
 # ============================================================
-# 9. Apache ProxyPass snippet
+# 10. Seed jazz standards via bulk-import API
 # ============================================================
-APACHE_SNIPPET_FILE="${SCRIPT_DIR}/apache_proxy.conf"
+if [[ "$SEED_DB" == "y" && "$READY" == "y" && -n "$ADMIN_TOKEN" ]]; then
+    step "Seeding jazz standards database"
+
+    if [[ ! -f "$SEED_FILE" ]]; then
+        warn "Seed file not found: ${SEED_FILE} — skipping."
+    else
+        SEED_COUNT=$(jq 'length' "$SEED_FILE" 2>/dev/null || echo "?")
+        info "Importing ${SEED_COUNT} standards from $(basename "$SEED_FILE")…"
+
+        IMPORT_RESP=$(curl -sf -X POST "${BASE_URL}/api/jazz_standards/bulk_import" \
+            -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @"$SEED_FILE" 2>/dev/null) || IMPORT_RESP=""
+
+        if [[ -z "$IMPORT_RESP" ]]; then
+            warn "Bulk import request failed. Import manually after install:"
+            warn "  ADMIN_TOKEN=<token> API_URL=${BASE_URL} go run scripts/import_standards.go scripts/standards_seed.json"
+        else
+            IMPORTED=$(echo "$IMPORT_RESP" | jq -r '.imported // 0' 2>/dev/null || echo 0)
+            SKIPPED=$(echo  "$IMPORT_RESP" | jq -r '.skipped  // 0' 2>/dev/null || echo 0)
+            FAILED=$(echo   "$IMPORT_RESP" | jq -r '.failed   // 0' 2>/dev/null || echo 0)
+            success "Import done — imported: ${IMPORTED}, skipped: ${SKIPPED}, failed: ${FAILED}"
+        fi
+    fi
+elif [[ "$SEED_DB" == "y" && ( "$READY" != "y" || -z "$ADMIN_TOKEN" ) ]]; then
+    warn "Skipped seeding (service not ready / no admin token)."
+    warn "Run manually once the service is up:"
+    warn "  ADMIN_TOKEN=<token> API_URL=${BASE_URL} go run scripts/import_standards.go scripts/standards_seed.json"
+fi
+
+# ============================================================
+# 11. Apache ProxyPass snippet
+# ============================================================
+step "Generating Apache config snippet"
+
+APACHE_FILE="${SCRIPT_DIR}/apache_proxy.conf"
 
 if [[ -n "$BASE_PATH" ]]; then
-    # Reverse-proxy at a sub-path
     PROXY_PATH="${BASE_PATH}/"
     PROXY_TARGET="http://localhost:${APP_PORT}${BASE_PATH}/"
-
-    cat > "$APACHE_SNIPPET_FILE" <<EOF
-# ── Jazz Standards DB — Apache ProxyPass config ───────────────────────────────
-# Add these two lines inside your <VirtualHost> block.
-# Required Apache modules: mod_proxy  mod_proxy_http
-#   sudo a2enmod proxy proxy_http && sudo systemctl reload apache2
+    cat > "$APACHE_FILE" <<EOF
+# ── Jazz Standards DB — Apache ProxyPass ──────────────────────────────────────
+# Add these two lines inside your <VirtualHost *:80> or <VirtualHost *:443>.
 #
-# Base path : ${BASE_PATH}
-# App port  : ${APP_PORT}
+#   Required modules:
+#     sudo a2enmod proxy proxy_http && sudo systemctl reload apache2
+#
+#   Base path : ${BASE_PATH}
+#   App port  : ${APP_PORT}
 
 ProxyPass        ${PROXY_PATH}  ${PROXY_TARGET}
 ProxyPassReverse ${PROXY_PATH}  ${PROXY_TARGET}
 EOF
-
 else
-    # Serving from root — proxy everything
-    cat > "$APACHE_SNIPPET_FILE" <<EOF
-# ── Jazz Standards DB — Apache ProxyPass config ───────────────────────────────
-# App is served from root (/). Add these lines inside your <VirtualHost>.
-# Required Apache modules: mod_proxy  mod_proxy_http
-#   sudo a2enmod proxy proxy_http && sudo systemctl reload apache2
+    cat > "$APACHE_FILE" <<EOF
+# ── Jazz Standards DB — Apache ProxyPass ──────────────────────────────────────
+# App serves from root /. Add these lines inside your <VirtualHost>.
 #
-# App port : ${APP_PORT}
+#   Required modules:
+#     sudo a2enmod proxy proxy_http && sudo systemctl reload apache2
+#
+#   App port : ${APP_PORT}
 
 ProxyPass        /  http://localhost:${APP_PORT}/
 ProxyPassReverse /  http://localhost:${APP_PORT}/
 EOF
-
 fi
 
-success "Apache config snippet written: ${APACHE_SNIPPET_FILE}"
-echo ""
+success "Apache snippet written: ${APACHE_FILE}"
 
 # ============================================================
-# 10. Done — print summary
+# 12. Final summary
 # ============================================================
-bold "╔══════════════════════════════════════════════════════╗"
-bold "║                  Installation complete               ║"
-bold "╚══════════════════════════════════════════════════════╝"
+echo ""
+bold "╔══════════════════════════════════════════════════════════╗"
+bold "║                 Installation complete ✓                  ║"
+bold "╚══════════════════════════════════════════════════════════╝"
 echo ""
 echo -e "  Binary      : ${GREEN}${INSTALL_DIR}/jazz_standards_db${RESET}"
 echo -e "  Config      : ${GREEN}${INSTALL_DIR}/.env${RESET}"
 echo -e "  Service     : ${GREEN}jazz-standards-db.service${RESET}"
+[[ -n "$ADMIN_TOKEN" ]] && \
+echo -e "  Admin token : ${GREEN}${ADMIN_TOKEN}${RESET}"
 echo ""
-echo -e "  ${BOLD}Apache proxy snippet:${RESET}"
-echo "  ┌──────────────────────────────────────────────────┐"
-while IFS= read -r line; do
-    # Skip comment lines in the display
-    [[ "$line" =~ ^# ]] && continue
-    [[ -z "$line" ]]    && continue
+echo -e "  ${BOLD}Apache ProxyPass (paste into your <VirtualHost>):${RESET}"
+echo "  ┌─────────────────────────────────────────────────────┐"
+grep -v '^#' "$APACHE_FILE" | grep -v '^$' | while IFS= read -r line; do
     echo "  │  $line"
-done < "$APACHE_SNIPPET_FILE"
-echo "  └──────────────────────────────────────────────────┘"
+done
+echo "  └─────────────────────────────────────────────────────┘"
+echo -e "  Full file: ${GREEN}${APACHE_FILE}${RESET}"
 echo ""
-echo -e "  Full snippet file: ${GREEN}${APACHE_SNIPPET_FILE}${RESET}"
+bold "  Service management:"
+echo "   sudo systemctl status  jazz-standards-db"
+echo "   sudo systemctl restart jazz-standards-db"
+echo "   sudo journalctl -u     jazz-standards-db -f"
 echo ""
-bold "  Next steps:"
-echo "   1. Create the first admin user:"
-echo "      sudo -u ${SERVICE_USER} ${INSTALL_DIR}/jazz_standards_db --create-admin"
-echo "      (or run:  go run cmd/create_admin/main.go  from the source tree)"
-echo ""
-echo "   2. Seed the 298-standard database:"
-echo "      Read the token from step 1, then:"
-echo "      ADMIN_TOKEN=<token> API_URL=http://localhost:${APP_PORT}${BASE_PATH} \\"
-echo "        go run scripts/import_standards.go scripts/standards_seed.json"
-echo ""
-echo "   3. Paste the Apache snippet into your <VirtualHost> and reload:"
-echo "      sudo a2enmod proxy proxy_http"
-echo "      sudo systemctl reload apache2"
-echo ""
-echo "   4. Service management:"
-echo "      sudo systemctl status  jazz-standards-db"
-echo "      sudo systemctl restart jazz-standards-db"
-echo "      sudo journalctl -u     jazz-standards-db -f"
-echo ""
+if [[ -z "$ADMIN_TOKEN" || "$READY" != "y" ]]; then
+    bold "  ⚠  Manual steps still needed:"
+    echo "   1. Create admin:  go run cmd/create_admin/main.go"
+    echo "   2. Seed DB:       ADMIN_TOKEN=<token> API_URL=${BASE_URL} \\"
+    echo "                     go run scripts/import_standards.go scripts/standards_seed.json"
+    echo ""
+fi
