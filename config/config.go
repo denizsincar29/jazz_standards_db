@@ -19,13 +19,16 @@ type Config struct {
 	Environment string
 	BasePath    string
 	TestAPI     bool
+	// ntfy.sh push notifications for admins
+	NtfyURL   string // e.g. https://ntfy.sh
+	NtfyTopic string // e.g. jazz_admin_alerts
+	NtfyToken string // optional Bearer token if topic is protected
 }
 
 var AppConfig *Config
 
-// Load reads configuration from environment variables
+// Load reads configuration from environment variables (and optional .env)
 func Load() error {
-	// Try to load .env file, but don't fail if it doesn't exist
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
@@ -40,22 +43,29 @@ func Load() error {
 		JWTSecret:   getEnv("JWT_SECRET", "change-me-in-production"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 		BasePath:    getEnv("BASE_PATH", ""),
-		TestAPI:     getEnv("TEST_API", "") == "true",
+		TestAPI:     getEnv("TEST_API", "") != "",
+		NtfyURL:     getEnv("NTFY_URL", "https://ntfy.sh"),
+		NtfyTopic:   getEnv("NTFY_TOPIC", ""),
+		NtfyToken:   getEnv("NTFY_TOKEN", ""),
 	}
 
 	return nil
 }
 
 func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
-	return value
+	return defaultValue
 }
 
-// GetDSN returns the database connection string
+// GetDSN returns the PostgreSQL DSN.
 func (c *Config) GetDSN() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
+}
+
+// NtfyEnabled returns true when ntfy notifications are configured.
+func (c *Config) NtfyEnabled() bool {
+	return c.NtfyTopic != ""
 }

@@ -1,523 +1,380 @@
-# Jazz Standards Database - Go PWA
+# Jazz Standards Database
 
-A Progressive Web App (PWA) for tracking and managing your jazz standards repertoire, built with Go and standard library HTTP.
+A self-hosted REST API + PWA for tracking jazz standards, personal pieces, and original compositions. Built with Go, PostgreSQL, and Gorilla Mux.
+
+---
+
+## Table of Contents
+
+1. [Features](#features)
+2. [Quick Start](#quick-start)
+3. [Configuration](#configuration)
+4. [Apache Reverse Proxy](#apache-reverse-proxy)
+5. [Importing Standards](#importing-standards)
+6. [API Reference](#api-reference)
+7. [Pass Keys](#pass-keys)
+8. [ntfy Notifications](#ntfy-notifications)
+9. [Running Tests](#running-tests)
+
+---
 
 ## Features
 
-- **Progressive Web App**: Install on mobile/desktop, works offline
-- **User Management**: Secure authentication with bcrypt and tokens
-- **Common Standards Database**: Shared database of jazz standards
-- **User Submissions**: All authenticated users can submit new standards
-- **Approval Workflow**: Admin must approve user-submitted standards before they appear in the database
-- **Personal Tracking**: Track which standards you know
-- **Categories**: Organize your standards into custom categories
-- **Search & Filter**: Find standards by title, composer, or style
-- **Admin Panel**: Approve/reject/delete standards, view pending submissions
-- **Responsive Design**: Works on all devices
+| Feature | Description |
+|---|---|
+| **300+ Jazz Standards** | Pre-seeded database with composers, keys, styles, and iReal Pro links |
+| **User Lists** | Add standards to your personal list with proficiency level, notes, category |
+| **Proficiency Tracking** | `beginner → learning → know_it → master` per standard |
+| **Practice Logs** | Log practice sessions with duration and notes |
+| **Categories** | Colour-coded categories to organise your list (Ballads, Gig Tunes, etc.) |
+| **Personal Pieces** | Private list of rare/local tunes not in the global database |
+| **Composed Tunes** | Your own compositions, shareable via a unique URL |
+| **Shared Tune Links** | Send a composition to another user; they click Accept to add it |
+| **Pass Keys** | Named API tokens for scripted / programmatic access |
+| **Public Profiles** | Opt-in: let others browse your standard list |
+| **Admin Approval** | User-submitted standards require admin sign-off |
+| **ntfy Notifications** | Push alerts to admins when a standard awaits approval |
+| **JSON + CSV Export** | Export your list in either format |
+| **Random Picker** | Get a random standard, optionally filtered by style/key |
+| **Base-path Support** | Run behind an Apache `ProxyPass` at any sub-path |
+| **PWA** | Installable progressive web app with service worker |
 
-## Technology Stack
-
-- **Backend**: Go 1.21+ with standard library HTTP + Gorilla Mux
-- **Database**: PostgreSQL 15+ with GORM ORM
-- **Frontend**: Vanilla JavaScript PWA (no frameworks)
-- **Authentication**: Token-based with bcrypt password hashing
-- **Deployment**: Docker & Docker Compose
+---
 
 ## Quick Start
 
-### Option 1: Docker Deployment (Recommended)
+### Docker Compose (recommended)
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/denizsincar29/jazz_standards_db.git
-   cd jazz_standards_db
-   ```
-
-2. **Run the Docker setup script**
-   ```bash
-   ./build_docker.sh
-   ```
-   
-   This will:
-   - Create `.env` configuration file for Docker
-   - Ask for external port (host port mapping)
-   - Ask for base path and database credentials
-   - Generate Apache proxy configuration in `proxy.txt`
-
-3. **Start with Docker Compose**
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Create the first admin account**
-   
-   Build and run the admin creation tool:
-   ```bash
-   go build -o create_admin cmd/create_admin/main.go
-   ./create_admin
-   ```
-   
-   The tool will:
-   - Read database configuration from `.env` or environment variables
-   - Prompt for username, display name, and password interactively
-   - Create or update the admin user in the database
-   - Passwords are hidden during input for security
-
-5. **Access the application**
-   - Open http://localhost:8000 in your browser (or your configured external port)
-   - Login with your admin credentials
-   - Start adding and approving jazz standards!
-
-### Option 2: Native Deployment (systemd)
-
-1. **Clone and run native setup**
-   ```bash
-   git clone https://github.com/denizsincar29/jazz_standards_db.git
-   cd jazz_standards_db
-   ./build.sh
-   ```
-   
-   This will:
-   - Create `.env` configuration file for native deployment
-   - Ask for server port (the port the Go app listens on)
-   - Ask for database host, port, and credentials
-   - Optionally create a systemd service
-   - Generate Apache proxy configuration in `proxy.txt`
-
-2. **Build and start the application**
-   ```bash
-   go build -o jazz_standards_db main.go
-   sudo systemctl daemon-reload
-   sudo systemctl enable jazz-standards-db
-   sudo systemctl start jazz-standards-db
-   ```
-
-3. **Access the application at the port you configured**
-
-### Local Development
-
-#### Prerequisites
-- Go 1.21 or higher
-- PostgreSQL 15 or higher
-
-#### Setup
-
-1. **Install dependencies**
-   ```bash
-   go mod download
-   ```
-
-2. **Setup PostgreSQL**
-   ```bash
-   # Create database
-   createdb jazz
-   
-   # Or use psql
-   psql -U postgres -c "CREATE DATABASE jazz;"
-   ```
-
-3. **Configure environment**
-   ```bash
-   ./build.sh  # Interactive setup for native deployment
-   # Or manually create .env file with your settings
-   ```
-
-4. **Run the application**
-   ```bash
-   go run main.go
-   ```
-
-5. **Access the application**
-   - Open http://localhost:8000
-
-## API Documentation
-
-### Authentication
-
-#### POST `/api/register`
-Create a new user account (non-admin)
-```json
-{
-  "username": "jazzfan",
-  "name": "Jazz Fan",
-  "password": "securepassword"
-}
+```bash
+cp .env.example .env          # edit DB credentials, JWT_SECRET, etc.
+docker-compose up -d
+# Create first admin
+docker-compose exec app ./create_admin
+# Seed the 300-standard database
+ADMIN_TOKEN=<token> API_URL=http://localhost:8000 \
+  go run scripts/import_standards.go scripts/standards_seed.json
 ```
 
-#### POST `/api/login`
-Login and receive authentication token
-```json
-{
-  "username": "jazzfan",
-  "password": "securepassword"
-}
+### Local development
+
+```bash
+# Requires Go 1.22+ and PostgreSQL
+cp .env.example .env
+go run . &
+./create_admin          # or: go run cmd/create_admin/main.go
 ```
 
-### Jazz Standards
+---
 
-#### GET `/api/jazz_standards`
-List all jazz standards with pagination and filters
-- Regular users: Only see approved standards
-- Admins: Can filter by status (pending, approved, rejected)
-```
-Query params:
-- page (default: 1)
-- limit (default: 100)
-- search (optional)
-- style (optional)
-- status (optional, admin only): pending, approved, rejected
-```
+## Configuration
 
-#### POST `/api/jazz_standards` (All authenticated users)
-Submit a new jazz standard
-- **Regular users**: Standard is created with status="pending", requires admin approval
-- **Admins**: Standard is auto-approved with status="approved"
-```json
-{
-  "title": "All the Things You Are",
-  "composer": "Jerome Kern",
-  "style": "swing",
-  "additional_note": "From 'Very Warm for May'"
-}
-```
+All settings are read from environment variables (or `.env` in the project root).
 
-#### GET `/api/jazz_standards/pending` (Admin only)
-List all pending standards awaiting approval
+| Variable | Default | Description |
+|---|---|---|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | `jazz` | DB user |
+| `DB_PASSWORD` | `jazz` | DB password |
+| `DB_NAME` | `jazz` | DB name |
+| `PORT` | `8000` | HTTP listen port |
+| `JWT_SECRET` | *(change me)* | Token signing secret |
+| `BASE_PATH` | *(empty)* | URL prefix for reverse proxy, e.g. `/jazz` |
+| `NTFY_URL` | `https://ntfy.sh` | ntfy server base URL |
+| `NTFY_TOPIC` | *(empty)* | ntfy topic name (leave empty to disable) |
+| `NTFY_TOKEN` | *(empty)* | Bearer token if topic is access-controlled |
+| `ENVIRONMENT` | `development` | Set to `production` for quieter DB logging |
+| `TEST_API` | *(empty)* | Any non-empty value enables `/testapi` debug page |
 
-#### POST `/api/jazz_standards/:id/approve` (Admin only)
-Approve a pending standard
+Copy `.env.example` to `.env` and edit before starting.
 
-#### POST `/api/jazz_standards/:id/reject` (Admin only)
-Reject a pending standard
+---
 
-#### PUT `/api/jazz_standards/:id` (Admin only)
-Update a jazz standard
+## Apache Reverse Proxy
 
-#### DELETE `/api/jazz_standards/:id` (Admin only)
-Delete a jazz standard
+Set `BASE_PATH=/jazz` in your `.env`, then add to your Apache vhost:
 
-### User Standards
+```apache
+<VirtualHost *:443>
+    ServerName example.com
 
-#### GET `/api/users/me/standards`
-Get all standards the user knows
+    # Proxy the app
+    ProxyPass        /jazz/ http://localhost:8000/jazz/
+    ProxyPassReverse /jazz/ http://localhost:8000/jazz/
 
-#### POST `/api/users/me/standards/:standard_id`
-Add a standard to your known list
-```json
-{
-  "category_id": 1,
-  "notes": "Working on this in F major"
-}
+    # WebSocket support (optional)
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} websocket [NC]
+    RewriteCond %{HTTP:Connection} upgrade [NC]
+    RewriteRule ^/jazz/(.*) ws://localhost:8000/jazz/$1 [P,L]
+
+    # Required modules: mod_proxy mod_proxy_http mod_rewrite
+</VirtualHost>
 ```
 
-#### PUT `/api/users/me/standards/:standard_id`
-Update category or notes for a standard
+The app normalises `BASE_PATH` automatically — leading/trailing slashes are handled, so `/jazz`, `jazz`, and `/jazz/` all work.
 
-#### DELETE `/api/users/me/standards/:standard_id`
-Remove a standard from your known list
+---
 
-### Categories
+## Importing Standards
 
-#### GET `/api/users/me/categories`
-List user's categories
+### Option 1 – Bulk import API (recommended)
 
-#### POST `/api/users/me/categories`
-Create a new category
-```json
-{
-  "name": "Working On",
-  "color": "#4a90e2"
-}
+```bash
+# 1. Create an admin user and log in to get a token
+curl -s -X POST http://localhost:8000/api/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"yourpassword"}' | jq .token
+
+# 2. Import the bundled 300-standard seed file
+ADMIN_TOKEN=<token from step 1>
+go run scripts/import_standards.go scripts/standards_seed.json
 ```
 
-#### PUT `/api/users/me/categories/:id`
-Update a category
+### Option 2 – One standard at a time
 
-#### DELETE `/api/users/me/categories/:id`
-Delete a category
+```bash
+curl -X POST http://localhost:8000/api/jazz_standards \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title": "Autumn Leaves",
+    "composer": "Joseph Kosma",
+    "style": "swing",
+    "key": "G-",
+    "ireal_pro_link": "irealbook://Autumn%20Leaves=Joseph%20Kosma=Medium%20Swing=..."
+  }'
+```
 
-## Jazz Styles
+### Getting iReal Pro URLs for existing standards
 
-Supported jazz styles:
-- `swing`
-- `bebop`
-- `bossa_nova`
-- `latin`
-- `modal`
-- `waltz`
-- `fusion`
-- `dixieland`
-- `ragtime`
-- `big_band`
-- `samba`
-- `latin_swing`
-- `free`
+iReal Pro stores its library as URL-encoded links. There are three ways to get them:
 
-## Importing Jazz Standards
+1. **From the app** – open a chart in iReal Pro → Share → Copy iReal Pro Link.
+2. **irealb.com forums** – the community at [https://www.irealb.com/forums/](https://www.irealb.com/forums/) maintains playlists with hundreds of standards. Download a playlist, open it in iReal Pro, then export individual links.
+3. **iRealb community playlists** – playlists like *"The Jazz 1350"* or *"Jazz Standards"* are shared on the forums as single `irealbook://` URLs containing dozens of songs. Parse them with a script and import the key/style data.
 
-### Option 1: Create Import Script
+> **Tip**: The `ireal_pro_link` field accepts any `irealbook://` URL. Paste it straight from the iReal Pro share sheet.
 
-Create a file `standards.json`:
+### Bulk JSON format
+
+The seed file and import script use this schema:
+
 ```json
 [
   {
-    "title": "Autumn Leaves",
-    "composer": "Joseph Kosma",
-    "style": "swing"
-  },
-  {
     "title": "All the Things You Are",
     "composer": "Jerome Kern",
-    "style": "swing"
+    "style": "swing",
+    "key": "Ab",
+    "additional_note": "From the musical Very Warm for May",
+    "ireal_pro_link": "irealbook://..."
   }
 ]
 ```
 
-Then use the import script:
+Valid styles: `dixieland`, `ragtime`, `big_band`, `bossa_nova`, `samba`, `latin`, `latin_swing`, `swing`, `waltz`, `bebop`, `modal`, `free`, `fusion`.
+
+---
+
+## API Reference
+
+All endpoints are under `/api` (or `/<BASE_PATH>/api` if a base path is set).
+
+### Authentication
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/register` | Register: `{username, name, password}` → `{token, user}` |
+| `POST` | `/api/login` | Login: `{username, password}` → `{token, user}` |
+| `POST` | `/api/logout` | Invalidates the current session token |
+
+Use the returned token as `Authorization: Bearer <token>` on all subsequent requests, or as the `token` cookie.
+
+### My Profile
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/users/me` | Get current user |
+| `PATCH` | `/api/users/me` | Update `{name?, public_profile?}` |
+
+### Pass Keys
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/users/me/passkeys` | Create pass key `{name}` — returns raw token **once** |
+| `GET` | `/api/users/me/passkeys` | List pass keys (tokens hidden, hint shown) |
+| `DELETE` | `/api/users/me/passkeys/{id}` | Revoke a pass key |
+
+### Jazz Standards (global database)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/jazz_standards` | User | List/search. Params: `search`, `style`, `key`, `page`, `limit` |
+| `GET` | `/api/jazz_standards/{id}` | User | Get one standard |
+| `GET` | `/api/jazz_standards/random` | User | Random standard. Params: `style`, `key` |
+| `POST` | `/api/jazz_standards` | User | Submit a standard (admin → auto-approved; user → pending) |
+| `PUT` | `/api/jazz_standards/{id}` | Admin | Update standard |
+| `DELETE` | `/api/jazz_standards/{id}` | Admin | Delete standard |
+| `POST` | `/api/jazz_standards/{id}/approve` | Admin | Approve a pending standard |
+| `POST` | `/api/jazz_standards/{id}/reject` | Admin | Reject a pending standard |
+| `GET` | `/api/jazz_standards/pending` | Admin | List pending submissions |
+| `POST` | `/api/jazz_standards/bulk_import` | Admin | Import array of standards (JSON body) |
+
+### My Standard List
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/users/me/standards` | List my standards (grouped by category). Param: `proficiency` |
+| `POST` | `/api/users/me/standards/{id}` | Add a standard: `{proficiency?, notes?, category_id?}` |
+| `PUT` | `/api/users/me/standards/{id}` | Update entry: `{proficiency?, notes?, category_id?}` |
+| `DELETE` | `/api/users/me/standards/{id}` | Remove from my list |
+| `GET` | `/api/users/me/standards/export` | Export list. Param: `format=json\|csv` |
+| `POST` | `/api/users/me/standards/{id}/practice` | Log practice: `{duration_min, notes?, practiced_at?}` |
+| `GET` | `/api/users/me/practice` | List practice logs. Param: `standard_id` |
+
+### Categories
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/users/me/categories` | List my categories |
+| `POST` | `/api/users/me/categories` | Create: `{name, color?}` |
+| `PUT` | `/api/users/me/categories/{id}` | Update: `{name?, color?}` |
+| `DELETE` | `/api/users/me/categories/{id}` | Delete (standards move to Uncategorized) |
+
+### Personal Pieces
+
+Personal pieces are rare/local tunes that aren't jazz standards — local compositions your band plays, obscure originals, etc. They live in your personal space and are never submitted for admin review.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/users/me/pieces` | List my personal pieces |
+| `POST` | `/api/users/me/pieces` | Create: `{title, composer?, style?, key?, notes?, ireal_pro_link?, is_public?}` |
+| `PUT` | `/api/users/me/pieces/{id}` | Update |
+| `DELETE` | `/api/users/me/pieces/{id}` | Delete |
+
+### Composed Tunes & Sharing
+
+Composed tunes are your own original compositions. Each gets a unique share URL that you can send to another musician.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/users/me/compositions` | User | List my compositions |
+| `POST` | `/api/users/me/compositions` | User | Create: `{title, composer?, style?, key?, description?, ireal_pro_link?, is_public?}` |
+| `PUT` | `/api/users/me/compositions/{id}` | User | Update |
+| `DELETE` | `/api/users/me/compositions/{id}` | User | Delete |
+| `GET` | `/api/shared_tune?id=<shareID>` | None | View a public composition by share ID |
+| `POST` | `/api/shared_tune/accept?id=<shareID>` | User | Accept into personal pieces |
+
+**Sharing workflow:**
+1. You create a composition with `is_public: true`.
+2. The response contains `share_id` — build the share URL:
+   `https://yourdomain.com/api/shared_tune?id=<share_id>`
+3. Send the URL to a colleague.
+4. They `POST /api/shared_tune/accept?id=<share_id>` — the tune is copied into their personal pieces.
+
+### Public Profiles
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/users/{username}/standards` | View another user's list — only if `public_profile: true` |
+
+### Admin
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/admin/stats` | Totals: users, standards, pending, practice minutes, top 10 |
+| `GET` | `/api/users` | List all users |
+| `DELETE` | `/api/users/{id}` | Delete a user |
+
+---
+
+## Pass Keys
+
+Pass keys are named long-lived API tokens for scripts and integrations. Unlike the session token (which is overwritten on each login), you can create multiple pass keys and revoke them individually.
+
 ```bash
-go run scripts/import_standards.go standards.json
+# Create
+curl -X POST http://localhost:8000/api/users/me/passkeys \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
+  -d '{"name": "My Import Script"}'
+# Response: {"token": "abc...xyz", "token_hint": "xyz", "message": "Save this token – it will not be shown again"}
+
+# Use exactly like a session token
+curl http://localhost:8000/api/jazz_standards \
+  -H "Authorization: Bearer abc...xyz"
+
+# List (tokens hidden)
+curl http://localhost:8000/api/users/me/passkeys \
+  -H "Authorization: Bearer $SESSION_TOKEN"
+
+# Revoke
+curl -X DELETE http://localhost:8000/api/users/me/passkeys/1 \
+  -H "Authorization: Bearer $SESSION_TOKEN"
 ```
 
-### Option 2: Use API Directly
+---
 
-```bash
-# Set your admin token
-TOKEN="your-admin-token"
+## ntfy Notifications
 
-# Add standards via API
-curl -X POST http://localhost:8000/api/jazz_standards \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Blue Bossa","composer":"Kenny Dorham","style":"bossa_nova"}'
-```
+[ntfy.sh](https://ntfy.sh) delivers push notifications to your phone or desktop when a user submits a standard for review.
 
-### Data Sources
-
-**Recommended sources for jazz standards data:**
-
-1. **Wikipedia**: "List of jazz standards" - public domain information
-2. **Real Book**: Public domain standards only
-3. **Jazz Standards Index**: Compile from various public sources
-4. **Community Contributions**: User-sourced standards
-
-**Important**: Respect copyright laws. Only include titles, composers, and basic metadata. Do not include copyrighted chord charts or lyrics.
-
-## PWA Features
-
-### Installation
-- On mobile: Tap "Add to Home Screen" when prompted
-- On desktop: Look for the install icon in the address bar
-
-### Offline Support
-- Service worker caches static assets
-- Works offline after first visit
-- API requests cached for offline viewing
-
-### Performance
-- Fast load times with caching
-- Responsive design for all screen sizes
-- Optimized for 2000+ standards
-
-## Project Structure
-
-```
-/
-├── main.go              # Application entry point
-├── go.mod               # Go module dependencies
-├── config/              # Configuration management
-├── models/              # Database models (User, JazzStandard, etc.)
-├── database/            # Database connection and migrations
-├── handlers/            # HTTP request handlers
-├── middleware/          # Authentication middleware
-├── utils/               # Helper functions
-├── static/              # PWA frontend
-│   ├── index.html
-│   ├── manifest.json
-│   ├── sw.js           # Service worker
-│   ├── css/
-│   ├── js/
-│   └── icons/
-└── scripts/            # Import scripts
-
-```
-
-## Development
-
-### Build
-```bash
-go build -o jazz_standards_db
-```
-
-### Run Tests
-```bash
-go test ./...
-```
-
-### Docker Build
-```bash
-docker build -t jazz-standards-db .
-docker run -p 8000:8000 \
-  -e DB_HOST=host.docker.internal \
-  -e DB_PASSWORD=jazz \
-  jazz-standards-db
-```
-
-## Environment Variables
+**Setup:**
+1. Install the ntfy app on your phone and subscribe to a private topic (e.g. `jazz_db_admin_abc123`).
+2. Add to `.env`:
 
 ```env
-# Database
-DB_HOST=localhost
-DB_PORT=5432
+NTFY_URL=https://ntfy.sh
+NTFY_TOPIC=jazz_db_admin_abc123
+# Optional: protect the topic with an access token
+NTFY_TOKEN=tk_mytoken
+```
+
+3. Restart the app.
+
+You can also self-host ntfy — just point `NTFY_URL` at your instance.
+
+---
+
+## Running Tests
+
+Tests require a PostgreSQL instance (separate from production).
+
+```bash
+# Start a test DB
+docker run -d --name jazz_test_db \
+  -e POSTGRES_USER=jazz -e POSTGRES_PASSWORD=jazz -e POSTGRES_DB=jazz_test \
+  -p 5433:5432 postgres:15-alpine
+
+# Run all tests
+export TEST_DB_HOST=localhost TEST_DB_PORT=5433 \
+       TEST_DB_USER=jazz TEST_DB_PASSWORD=jazz TEST_DB_NAME=jazz_test
+go test ./tests/... -v
+
+# Run a specific test file
+go test ./tests/... -run TestCreateAndUsePassKey -v
+```
+
+If `TEST_DB_HOST` is not set or the DB is unreachable, database tests are **skipped** automatically (not failed), so `go test ./...` always succeeds in CI environments without a DB.
+
+---
+
+## Docker Compose
+
+```yaml
+# .env.example values used:
+EXTERNAL_PORT=8000
 DB_USER=jazz
-DB_PASSWORD=jazz
+DB_PASSWORD=changeme
 DB_NAME=jazz
-
-# Server
-PORT=8000
-
-# Security
 JWT_SECRET=change-me-in-production
-
-# Environment
-ENVIRONMENT=development
+ENVIRONMENT=production
+BASE_PATH=          # e.g. /jazz for reverse proxy
+NTFY_TOPIC=         # leave empty to disable
+NTFY_TOKEN=
 ```
 
-## Deployment
-
-### Configuration
-
-Use the appropriate interactive setup script:
-
-**For Docker deployment:**
 ```bash
-./build_docker.sh
+docker-compose up -d
+docker-compose logs -f app
 ```
-
-**For native deployment (systemd):**
-```bash
-./build.sh
-```
-
-Both scripts guide you through:
-- Port configuration (external port for Docker, server port for native)
-- Base path for subpath deployments
-- Database credentials
-- JWT secret generation (auto-generated if not provided)
-- Apache proxy configuration
-
-Native deployment also offers:
-- Systemd service creation
-- Auto-detects user, group, and working directory
-
-The `.env` file is gitignored and won't be affected by `git pull`.
-
-### Apache Reverse Proxy
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed Apache configuration including:
-- Root path setup
-- Subpath setup (e.g., /jazzdb)
-- HTTPS configuration
-- WebSocket support
-
-Quick example for subpath deployment:
-
-1. **Apache config:**
-   ```apache
-   ProxyPass /jazzdb http://localhost:8000/
-   ProxyPassReverse /jazzdb http://localhost:8000/
-   ```
-
-2. **Configure Apache (Important - read the comments!):**
-   ```apache
-   # The trailing slash after /jazzdb/ is REQUIRED
-   # This tells Apache to strip /jazzdb from URLs before forwarding
-   
-   RewriteEngine on
-   RewriteRule ^/jazzdb$ /jazzdb/ [R=301,L]
-   
-   ProxyPass /jazzdb/ http://localhost:8000/
-   ProxyPassReverse /jazzdb/ http://localhost:8000/
-   ```
-
-The Go application doesn't need to know about the subpath - Apache strips it automatically. See `docs/DEPLOYMENT.md` for complete configuration examples.
-
-### Production Checklist
-
-- [ ] Use HTTPS with valid SSL certificate
-- [ ] Set strong JWT_SECRET
-- [ ] Configure firewall to block direct port access
-- [ ] Set up database backups
-- [ ] Configure log rotation
-- [ ] Monitor resource usage
-- [ ] Document your configuration in `changes.md`
-
-## Security Considerations
-
-- Passwords hashed with bcrypt (cost factor 10)
-- Token-based authentication
-- SQL injection protection via GORM
-- CORS configuration for production
-- HTTPS recommended for production
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-MIT License - See LICENSE file for details
-
-## Acknowledgments
-
-- Jazz community for standards information
-- Real Book for jazz standard references
-- Open source community for tools and libraries
-
-## Support
-
-For issues, questions, or contributions:
-- Open an issue on GitHub
-- Submit a pull request
-- Contact the maintainer
-
-## Migration from Python
-
-If you're migrating from the Python version:
-
-1. Export your data (if needed)
-2. Set up the Go version
-3. Import data using the import script
-4. Test all functionality
-5. Remove Python files
-
-The database schema is compatible, but the API may have minor differences.
-
-## Future Enhancements
-
-- [ ] Mobile apps (React Native)
-- [ ] Set list management
-- [ ] Practice session tracking
-- [ ] Chord chart integration
-- [ ] Social features (share repertoire)
-- [ ] Export to PDF/CSV
-- [ ] Integration with iReal Pro
-- [ ] Audio recordings/references
-
-## Version History
-
-### v2.0.0 (Go Rewrite)
-- Complete rewrite in Go
-- Progressive Web App frontend
-- User categories feature
-- Improved performance and scalability
-- Docker support
-
-### v1.0.0 (Python)
-- Initial Python/FastAPI implementation
-- Basic user and standards management
-- Simple web interface

@@ -31,7 +31,7 @@ func main() {
 		fmt.Println("Warning: .env file not found, using environment variables")
 	}
 
-	fmt.Println("\n=== Create Admin User ===\n")
+	fmt.Println("=== Create Admin User ===")
 
 	// Get input
 	reader := bufio.NewReader(os.Stdin)

@@ -13,20 +13,23 @@ type User struct {
 	PasswordHash string    `gorm:"not null" json:"-"`
 	IsAdmin      bool      `gorm:"default:false" json:"is_admin"`
 	Token        *string   `gorm:"unique" json:"token,omitempty"`
+	// PublicProfile: if true others can view this user's standard list
+	PublicProfile bool `gorm:"default:false" json:"public_profile"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 
 	// Relationships
-	Categories     []Category      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"categories,omitempty"`
-	UserStandards  []UserStandard  `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
-	CreatedStandards []JazzStandard `gorm:"foreignKey:CreatedBy" json:"-"`
+	Categories       []Category      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"categories,omitempty"`
+	UserStandards    []UserStandard  `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
+	CreatedStandards []JazzStandard  `gorm:"foreignKey:CreatedBy" json:"-"`
+	PassKeys         []PassKey       `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 func (User) TableName() string {
 	return "users"
 }
 
-// BeforeCreate hook to ensure token is handled correctly
+// BeforeCreate hook
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }

@@ -72,6 +72,8 @@ type JazzStandard struct {
 	Composer       string         `gorm:"not null" json:"composer"`
 	AdditionalNote string         `gorm:"type:text" json:"additional_note,omitempty"`
 	Style          JazzStyle      `gorm:"type:varchar(50);not null" json:"style"`
+	Key            string         `gorm:"type:varchar(10);default:''" json:"key,omitempty"`
+	IrealProLink   string         `gorm:"type:text;default:''" json:"ireal_pro_link,omitempty"`
 	Status         StandardStatus `gorm:"type:varchar(20);not null;default:'approved';index" json:"status"`
 	CreatedBy      *uint          `gorm:"index" json:"created_by,omitempty"`
 	ApprovedBy     *uint          `gorm:"index" json:"approved_by,omitempty"`
@@ -82,6 +84,9 @@ type JazzStandard struct {
 	Creator       *User          `gorm:"foreignKey:CreatedBy" json:"creator,omitempty"`
 	Approver      *User          `gorm:"foreignKey:ApprovedBy" json:"approver,omitempty"`
 	UserStandards []UserStandard `gorm:"foreignKey:JazzStandardID;constraint:OnDelete:CASCADE" json:"-"`
+
+	// Computed field – filled at query time, not stored in DB
+	PopularityCount int64 `gorm:"-" json:"popularity_count,omitempty"`
 }
 
 func (JazzStandard) TableName() string {
