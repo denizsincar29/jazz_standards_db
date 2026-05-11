@@ -1,3 +1,6 @@
+import API from './api.js';
+import Dom from './dom.js';
+
 // App state
 let currentUser = null;
 let allStandards = [];
@@ -101,6 +104,9 @@ function setupEventListeners() {
             }
         });
     });
+
+    // Attach delegated handlers for dynamic content
+    Dom.attachDelegation();
 }
 
 // Auth handlers
@@ -151,18 +157,18 @@ async function handleLogout() {
 // Helper functions for accessibility-aware hiding/showing
 function hideElement(elementId) {
     const element = document.getElementById(elementId);
-    if (element) {
-        element.classList.add('hidden');
-        element.setAttribute('aria-hidden', 'true');
-    }
+    if (!element) return;
+    element.classList.add('hidden');
+    element.setAttribute('aria-hidden', 'true');
+    try { element.inert = true; } catch (e) { /* inert may be unsupported */ }
 }
 
 function showElement(elementId) {
     const element = document.getElementById(elementId);
-    if (element) {
-        element.classList.remove('hidden');
-        element.setAttribute('aria-hidden', 'false');
-    }
+    if (!element) return;
+    element.classList.remove('hidden');
+    element.setAttribute('aria-hidden', 'false');
+    try { element.inert = false; } catch (e) { /* inert may be unsupported */ }
 }
 
 // Screen switching
@@ -289,14 +295,14 @@ function renderMyStandards(grouped) {
         categoryDiv.innerHTML = `
             <h3>${colorHtml}${categoryName}</h3>
             ${standards.map(us => `
-                <div class="standard-item">
+                <div class="standard-item" data-id="${us.jazz_standard_id}">
                     <div class="standard-info">
-                        <h4>${us.jazz_standard.title}</h4>
-                        <p>${us.jazz_standard.composer} - ${us.jazz_standard.style}</p>
-                        ${us.notes ? `<p><em>${us.notes}</em></p>` : ''}
+                        <h4>${escapeHtml(us.jazz_standard.title)}</h4>
+                        <p>${escapeHtml(us.jazz_standard.composer)} - ${escapeHtml(us.jazz_standard.style)}</p>
+                        ${us.notes ? `<p><em>${escapeHtml(us.notes)}</em></p>` : ''}
                     </div>
                     <div class="standard-actions">
-                        <button class="btn-remove" onclick="removeStandard(${us.jazz_standard_id})">Remove</button>
+                        <button class="btn-remove" data-action="remove" data-id="${us.jazz_standard_id}">Remove</button>
                     </div>
                 </div>
             `).join('')}
@@ -327,16 +333,16 @@ function renderAllStandards(data) {
             statusBadge = '<span style="color: #dc3545; font-weight: bold;">❌ Rejected</span>';
         }
         
-        const addBtn = `<button class="btn-know" onclick="addStandard(${standard.id})" aria-label="Add ${escapeHtml(standard.title)}">I Know This</button>`;
-        const removeBtn = `<button class="btn-remove" onclick="removeStandard(${standard.id})" aria-label="Remove ${escapeHtml(standard.title)}">Remove</button>`;
-        const deleteBtn = `<button class="btn-remove" onclick="deleteStandard(${standard.id})" aria-label="Delete ${escapeHtml(standard.title)}">Delete</button>`;
+        const addBtn = `<button class="btn-know" data-action="add" data-id="${standard.id}" aria-label="Add ${escapeHtml(standard.title)}">I Know This</button>`;
+        const removeBtn = `<button class="btn-remove" data-action="remove" data-id="${standard.id}" aria-label="Remove ${escapeHtml(standard.title)}">Remove</button>`;
+        const deleteBtn = `<button class="btn-remove" data-action="delete" data-id="${standard.id}" aria-label="Delete ${escapeHtml(standard.title)}">Delete</button>`;
         const actionBtn = isKnown ? removeBtn : addBtn;
 
         // Ensure the title has an id for aria-labelledby and the item is focusable
         const titleId = `standard-title-${standard.id}`;
 
         return `
-            <div class="standard-item" tabindex="0" role="article" aria-labelledby="${titleId}">
+            <div class="standard-item" tabindex="0" role="article" aria-labelledby="${titleId}" data-id="${standard.id}">
                 <div class="standard-info">
                     <h4 id="${titleId}">${escapeHtml(standard.title)} ${statusBadge}</h4>
                     <p>${escapeHtml(standard.composer)} - ${escapeHtml(standard.style)}</p>
@@ -364,9 +370,9 @@ function renderPagination(data) {
     }
     
     container.innerHTML = `
-        <button ${data.page === 1 ? 'disabled' : ''} onclick="loadAllStandards(${data.page - 1})">Previous</button>
+        <button ${data.page === 1 ? 'disabled' : ''} data-action="paginate" data-page="${data.page - 1}">Previous</button>
         <span>Page ${data.page} of ${totalPages}</span>
-        <button ${data.page === totalPages ? 'disabled' : ''} onclick="loadAllStandards(${data.page + 1})">Next</button>
+        <button ${data.page === totalPages ? 'disabled' : ''} data-action="paginate" data-page="${data.page + 1}">Next</button>
     `;
 }
 
@@ -382,20 +388,20 @@ function renderPendingStandards(data) {
     }
     
     container.innerHTML = standards.map(standard => `
-        <div class="standard-item pending-item">
+        <div class="standard-item pending-item" data-id="${standard.id}">
             <div class="standard-info">
-                <h4>${standard.title}</h4>
-                <p>${standard.composer} - ${standard.style}</p>
-                ${standard.additional_note ? `<p><em>${standard.additional_note}</em></p>` : ''}
+                <h4>${escapeHtml(standard.title)}</h4>
+                <p>${escapeHtml(standard.composer)} - ${escapeHtml(standard.style)}</p>
+                ${standard.additional_note ? `<p><em>${escapeHtml(standard.additional_note)}</em></p>` : ''}
                 <p style="font-size: 0.85em; color: #aaa;">
-                    Submitted by: ${standard.creator ? standard.creator.name : 'Unknown'} 
+                    Submitted by: ${standard.creator ? escapeHtml(standard.creator.name) : 'Unknown'} 
                     on ${new Date(standard.created_at).toLocaleDateString()}
                 </p>
             </div>
             <div class="standard-actions">
-                <button class="btn-approve" onclick="approveStandard(${standard.id})">✓ Approve</button>
-                <button class="btn-reject" onclick="rejectStandard(${standard.id})">✗ Reject</button>
-                <button class="btn-remove" onclick="deleteStandard(${standard.id})">Delete</button>
+                <button class="btn-approve" data-action="approve" data-id="${standard.id}">✓ Approve</button>
+                <button class="btn-reject" data-action="reject" data-id="${standard.id}">✗ Reject</button>
+                <button class="btn-remove" data-action="delete" data-id="${standard.id}">Delete</button>
             </div>
         </div>
     `).join('');
@@ -429,10 +435,10 @@ function renderPassKeys(keys) {
         return;
     }
     container.innerHTML = keys.map(k => `
-        <div class="passkey-item">
-            <strong>${k.name}</strong> <span style="color:#aaa">(${k.token_hint || ''})</span>
+        <div class="passkey-item" data-id="${k.id}">
+            <strong>${escapeHtml(k.name)}</strong> <span style="color:#aaa">(${escapeHtml(k.token_hint || '')})</span>
             <div style="font-size:0.85em;color:#aaa">Created: ${new Date(k.created_at).toLocaleString()}</div>
-            <div><button onclick="deletePassKey(${k.id})">Revoke</button></div>
+            <div><button data-action="delete-passkey" data-id="${k.id}">Revoke</button></div>
         </div>
     `).join('');
 }
@@ -490,12 +496,12 @@ function renderCategories() {
     }
     
     container.innerHTML = categories.map(cat => `
-        <div class="category-item">
+        <div class="category-item" data-id="${cat.id}">
             <h3>
                 <span class="category-color" style="background: ${cat.color}"></span>
-                ${cat.name}
+                ${escapeHtml(cat.name)}
             </h3>
-            <button class="btn-remove" onclick="deleteCategory(${cat.id})">Delete</button>
+            <button class="btn-remove" data-action="delete-category" data-id="${cat.id}">Delete</button>
         </div>
     `).join('');
 }
@@ -655,3 +661,13 @@ async function rejectStandard(id) {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', init);
+
+// Export selected functions to window for inline handlers and external scripts
+window.addStandard = addStandard;
+window.removeStandard = removeStandard;
+window.deleteStandard = deleteStandard;
+window.approveStandard = approveStandard;
+window.rejectStandard = rejectStandard;
+window.deleteCategory = deleteCategory;
+window.deletePassKey = deletePassKey;
+window.loadAllStandards = loadAllStandards;
