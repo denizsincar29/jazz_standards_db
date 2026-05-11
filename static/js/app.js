@@ -8,6 +8,12 @@ let myStandards = [];
 let categories = [];
 let currentPage = 1;
 
+function debugPrint(...args) {
+    if (window.DEBUG) {
+        console.log('[DEBUG]', ...args);
+    }
+}
+
 // Utility to escape HTML when rendering strings into templates
 function escapeHtml(str) {
     if (!str && str !== 0) return '';
