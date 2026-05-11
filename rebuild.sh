@@ -56,6 +56,13 @@ main() {
     sudo cp jazz_standards_db "$install_dir/jazz_standards_db"
     sudo chmod +x "$install_dir/jazz_standards_db"
 
+    for d in static scripts; do
+        if [[ -d "${SCRIPT_DIR}/${d}" ]]; then
+            sudo rm -rf "${install_dir}/${d}"
+            sudo cp -r "${SCRIPT_DIR}/${d}" "${install_dir}/${d}"
+        fi
+    done
+
     if [[ -f "$install_dir/.env" ]]; then
         sudo chmod 600 "$install_dir/.env"
     else
