@@ -15,6 +15,7 @@ import (
 type UpdateProfileRequest struct {
 	Name          *string `json:"name,omitempty"`
 	PublicProfile *bool   `json:"public_profile,omitempty"`
+	Username      *string `json:"username,omitempty"`
 }
 
 // GetMe returns the current authenticated user.
@@ -44,6 +45,15 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	if req.Name != nil && *req.Name != "" {
 		user.Name = *req.Name
+	}
+	// Allow changing username if provided and unique
+	if req.Username != nil && *req.Username != "" && *req.Username != user.Username {
+		var other models.User
+		if err := database.DB.Where("username = ? AND id != ?", *req.Username, user.ID).First(&other).Error; err == nil {
+			utils.RespondError(w, http.StatusConflict, "Username already taken")
+			return
+		}
+		user.Username = *req.Username
 	}
 	if req.PublicProfile != nil {
 		user.PublicProfile = *req.PublicProfile

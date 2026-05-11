@@ -118,6 +118,13 @@ const API = {
     async getMe() {
         return this.request('/users/me');
     },
+
+    async updateMe(payload) {
+        return this.request('/users/me', {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+        });
+    },
     
     // Standards
     async getStandards(page = 1, limit = 100, search = '', style = '') {
@@ -202,5 +209,23 @@ const API = {
     
     async rejectStandard(id) {
         return this.request(`/jazz_standards/${id}/reject`, { method: 'POST' });
+    },
+
+    // Passkeys / Profile
+    async listPassKeys() {
+        return this.request('/users/me/passkeys');
+    },
+
+    async createPassKey(name) {
+        return this.request('/users/me/passkeys', {
+            method: 'POST',
+            body: JSON.stringify({ name }),
+        });
+    },
+
+    async deletePassKey(id) {
+        return this.request(`/users/me/passkeys/${id}`, {
+            method: 'DELETE',
+        });
     },
 };

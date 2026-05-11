@@ -53,6 +53,12 @@ function setupEventListeners() {
             switchView(view);
         });
     });
+
+    // Settings forms (may not exist on auth screen)
+    const profileForm = document.getElementById('update-profile-form');
+    if (profileForm) profileForm.addEventListener('submit', handleUpdateProfile);
+    const passkeyForm = document.getElementById('create-passkey-form');
+    if (passkeyForm) passkeyForm.addEventListener('submit', handleCreatePassKey);
     
     // Search and filter
     document.getElementById('search-input').addEventListener('input', debounce(loadAllStandards, 300));
@@ -190,6 +196,8 @@ function switchView(viewName) {
         loadAllStandards();
     } else if (viewName === 'categories') {
         loadCategories();
+    } else if (viewName === 'settings') {
+        loadSettings();
     } else if (viewName === 'pending') {
         loadPendingStandards(1);
     }
@@ -372,6 +380,86 @@ function renderPendingStandards(data) {
             </div>
         </div>
     `).join('');
+}
+
+// Settings / Passkeys
+async function loadSettings() {
+    try {
+        const user = await API.getMe();
+        // prefill profile form
+        const nameEl = document.getElementById('profile-name');
+        const usernameEl = document.getElementById('profile-username');
+        const publicEl = document.getElementById('profile-public');
+        if (nameEl) nameEl.value = user.name || '';
+        if (usernameEl) usernameEl.value = user.username || '';
+        if (publicEl) publicEl.checked = !!user.public_profile;
+
+        // load passkeys
+        const keys = await API.listPassKeys();
+        renderPassKeys(keys || []);
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+    }
+}
+
+function renderPassKeys(keys) {
+    const container = document.getElementById('passkeys-list');
+    if (!container) return;
+    if (!keys || keys.length === 0) {
+        container.innerHTML = '<p style="color: white;">No pass keys yet.</p>';
+        return;
+    }
+    container.innerHTML = keys.map(k => `
+        <div class="passkey-item">
+            <strong>${k.name}</strong> <span style="color:#aaa">(${k.token_hint || ''})</span>
+            <div style="font-size:0.85em;color:#aaa">Created: ${new Date(k.created_at).toLocaleString()}</div>
+            <div><button onclick="deletePassKey(${k.id})">Revoke</button></div>
+        </div>
+    `).join('');
+}
+
+async function handleUpdateProfile(e) {
+    e.preventDefault();
+    const name = document.getElementById('profile-name').value;
+    const username = document.getElementById('profile-username').value;
+    const publicProfile = document.getElementById('profile-public').checked;
+    try {
+        const updated = await API.updateMe({ name: name || null, username: username || null, public_profile: publicProfile });
+        currentUser = updated;
+        showMainScreen();
+        alert('Profile updated');
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function handleCreatePassKey(e) {
+    e.preventDefault();
+    const name = document.getElementById('new-passkey-name').value;
+    if (!name) return alert('Name is required');
+    try {
+        const data = await API.createPassKey(name);
+        // Show token once
+        if (data.token) {
+            alert(`Pass key created. Save this token now:\n\n${data.token}`);
+        } else if (data.message) {
+            alert(data.message);
+        }
+        document.getElementById('create-passkey-form').reset();
+        await loadSettings();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function deletePassKey(id) {
+    if (!confirm('Revoke this pass key?')) return;
+    try {
+        await API.deletePassKey(id);
+        await loadSettings();
+    } catch (error) {
+        alert(error.message);
+    }
 }
 
 function renderCategories() {

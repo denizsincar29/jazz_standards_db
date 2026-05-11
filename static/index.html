@@ -56,6 +56,7 @@
                 <button class="nav-btn active" data-view="my-standards">My Standards</button>
                 <button class="nav-btn" data-view="all-standards">All Standards</button>
                 <button class="nav-btn" data-view="categories">Categories</button>
+                <button class="nav-btn" data-view="settings">Settings</button>
                 <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true">⏳ Pending Approvals</button>
             </nav>
 
@@ -111,6 +112,36 @@
                     <h2>My Categories</h2>
                     <button id="add-category-btn">+ Add Category</button>
                     <div id="categories-list"></div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view hidden" aria-hidden="true">
+                <div class="container">
+                    <h2>Settings</h2>
+                    <section>
+                        <h3>Profile</h3>
+                        <form id="update-profile-form">
+                            <label>Name</label>
+                            <input type="text" id="profile-name" placeholder="Full name">
+                            <label>Username</label>
+                            <input type="text" id="profile-username" placeholder="Username">
+                            <label>Public Profile</label>
+                            <input type="checkbox" id="profile-public">
+                            <div class="modal-buttons">
+                                <button type="submit">Save</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section style="margin-top:20px;">
+                        <h3>Pass Keys</h3>
+                        <form id="create-passkey-form">
+                            <input type="text" id="new-passkey-name" placeholder="Key name" required>
+                            <button type="submit">Create Pass Key</button>
+                        </form>
+                        <div id="passkeys-list" style="margin-top:10px;"></div>
+                    </section>
                 </div>
             </div>
         </div>
