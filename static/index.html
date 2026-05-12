@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a1a2e">
     <title>Jazz Standards DB</title>
-    <!-- BASE_PATH will be injected here by the server -->
     <base href="{{BASE_PATH}}">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="static/css/styles.css">
@@ -15,65 +14,65 @@
         <!-- Login/Register Screen -->
         <div id="auth-screen" class="screen" aria-hidden="false">
             <div class="container">
-                <h1>🎷 Jazz Standards DB</h1>
-                <div class="tabs">
-                    <button class="tab active" data-tab="login">Login</button>
-                    <button class="tab" data-tab="register">Register</button>
+                <div class="auth-logo">🎷</div>
+                <h1>Jazz Standards DB</h1>
+                <div class="tabs" role="tablist">
+                    <button class="tab active" role="tab" aria-selected="true" aria-controls="login-form" data-tab="login">Login</button>
+                    <button class="tab" role="tab" aria-selected="false" aria-controls="register-form" data-tab="register">Register</button>
                 </div>
-                
-                <!-- Login Form -->
-                <form id="login-form" class="auth-form active">
-                    <input type="text" id="login-username" placeholder="Username" required>
-                    <input type="password" id="login-password" placeholder="Password" required>
-                    <button type="submit">Login</button>
-                    <p class="error" id="login-error"></p>
+                <form id="login-form" class="auth-form active" aria-label="Login form">
+                    <label for="login-username" class="sr-only">Username</label>
+                    <input type="text" id="login-username" autocomplete="username" placeholder="Username" required>
+                    <label for="login-password" class="sr-only">Password</label>
+                    <input type="password" id="login-password" autocomplete="current-password" placeholder="Password" required>
+                    <button type="submit">Sign In</button>
+                    <p class="error" id="login-error" role="alert" aria-live="polite"></p>
                 </form>
-                
-                <!-- Register Form -->
-                <form id="register-form" class="auth-form">
+                <form id="register-form" class="auth-form" aria-label="Register form">
+                    <label for="register-name" class="sr-only">Full Name</label>
                     <input type="text" id="register-name" placeholder="Full Name" required>
-                    <input type="text" id="register-username" placeholder="Username" required>
-                    <input type="password" id="register-password" placeholder="Password" required>
-                    <button type="submit">Register</button>
-                    <p class="error" id="register-error"></p>
+                    <label for="register-username" class="sr-only">Username</label>
+                    <input type="text" id="register-username" autocomplete="username" placeholder="Username" required>
+                    <label for="register-password" class="sr-only">Password</label>
+                    <input type="password" id="register-password" autocomplete="new-password" placeholder="Password" required>
+                    <button type="submit">Create Account</button>
+                    <p class="error" id="register-error" role="alert" aria-live="polite"></p>
                 </form>
             </div>
         </div>
 
         <!-- Main App Screen -->
         <div id="main-screen" class="screen hidden" aria-hidden="true">
-            <!-- Header -->
             <header>
                 <h1>🎷 Jazz Standards DB</h1>
                 <div class="user-info">
-                    <span id="user-name"></span>
+                    <span id="user-name" aria-label="Logged in user"></span>
                     <button id="logout-btn">Logout</button>
                 </div>
             </header>
 
-            <!-- Navigation -->
-            <nav class="main-nav">
+            <nav class="main-nav" aria-label="Main navigation">
                 <button class="nav-btn active" data-view="my-standards">My Standards</button>
                 <button class="nav-btn" data-view="all-standards">All Standards</button>
                 <button class="nav-btn" data-view="categories">Categories</button>
                 <button class="nav-btn" data-view="settings">Settings</button>
-                <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true">⏳ Pending Approvals</button>
+                <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true">⏳ Pending</button>
             </nav>
 
-            <!-- My Standards View -->
-            <div id="my-standards-view" class="view active" aria-hidden="false">
+            <div id="my-standards-view" class="view active" aria-hidden="false" role="region" aria-label="My Standards">
                 <div class="container">
                     <h2>My Standards</h2>
-                    <div id="standards-by-category"></div>
+                    <div id="standards-by-category" aria-live="polite"></div>
                 </div>
             </div>
 
-            <!-- All Standards View -->
-            <div id="all-standards-view" class="view hidden" aria-hidden="true">
+            <div id="all-standards-view" class="view hidden" aria-hidden="true" role="region" aria-label="All Standards">
                 <div class="container">
                     <h2>All Standards</h2>
                     <div class="search-controls">
-                        <input type="text" id="search-input" placeholder="Search standards...">
+                        <label for="search-input" class="sr-only">Search standards</label>
+                        <input type="search" id="search-input" placeholder="Search standards…">
+                        <label for="style-filter" class="sr-only">Filter by style</label>
                         <select id="style-filter">
                             <option value="">All Styles</option>
                             <option value="swing">Swing</option>
@@ -91,69 +90,77 @@
                             <option value="free">Free</option>
                         </select>
                     </div>
-                    <button id="add-standard-btn">+ Add Standard</button>
-                    <div id="all-standards-list"></div>
-                    <div id="pagination"></div>
+                    <button id="add-standard-btn" aria-haspopup="dialog">+ Add Standard</button>
+                    <div id="all-standards-list" aria-live="polite" aria-label="Standards list"></div>
+                    <nav id="pagination" aria-label="Pagination"></nav>
                 </div>
             </div>
 
-            <!-- Pending Standards View (Admin Only) -->
-            <div id="pending-view" class="view hidden admin-only" aria-hidden="true">
+            <div id="pending-view" class="view hidden admin-only" aria-hidden="true" role="region" aria-label="Pending Approvals">
                 <div class="container">
                     <h2>⏳ Pending Approvals</h2>
-                    <p style="color: #aaa; margin-bottom: 20px;">Review and approve/reject standards submitted by users.</p>
-                    <div id="pending-standards-list"></div>
+                    <p class="muted">Review and approve/reject standards submitted by users.</p>
+                    <div id="pending-standards-list" aria-live="polite"></div>
                 </div>
             </div>
 
-            <!-- Categories View -->
-            <div id="categories-view" class="view hidden" aria-hidden="true">
+            <div id="categories-view" class="view hidden" aria-hidden="true" role="region" aria-label="Categories">
                 <div class="container">
                     <h2>My Categories</h2>
-                    <button id="add-category-btn">+ Add Category</button>
-                    <div id="categories-list"></div>
+                    <button id="add-category-btn" aria-haspopup="dialog">+ Add Category</button>
+                    <div id="categories-list" aria-live="polite"></div>
                 </div>
             </div>
 
-            <!-- Settings View -->
-            <div id="settings-view" class="view hidden" aria-hidden="true">
+            <div id="settings-view" class="view hidden" aria-hidden="true" role="region" aria-label="Settings">
                 <div class="container">
                     <h2>Settings</h2>
-                    <section>
-                        <h3>Profile</h3>
-                        <form id="update-profile-form">
-                            <label>Name</label>
+                    <section aria-labelledby="profile-heading">
+                        <h3 id="profile-heading">Profile</h3>
+                        <form id="update-profile-form" aria-label="Update profile">
+                            <label for="profile-name">Name</label>
                             <input type="text" id="profile-name" placeholder="Full name">
-                            <label>Username</label>
+                            <label for="profile-username">Username</label>
                             <input type="text" id="profile-username" placeholder="Username">
-                            <label>Public Profile</label>
-                            <input type="checkbox" id="profile-public">
+                            <div class="checkbox-row">
+                                <input type="checkbox" id="profile-public">
+                                <label for="profile-public">Public Profile</label>
+                            </div>
                             <div class="modal-buttons">
-                                <button type="submit">Save</button>
+                                <button type="submit">Save Changes</button>
                             </div>
                         </form>
                     </section>
-
-                    <section style="margin-top:20px;">
-                        <h3>Pass Keys</h3>
-                        <form id="create-passkey-form">
+                    <section aria-labelledby="passkeys-heading" style="margin-top:28px;">
+                        <h3 id="passkeys-heading">Pass Keys</h3>
+                        <form id="create-passkey-form" aria-label="Create pass key">
+                            <label for="new-passkey-name" class="sr-only">Key name</label>
                             <input type="text" id="new-passkey-name" placeholder="Key name" required>
                             <button type="submit">Create Pass Key</button>
                         </form>
-                        <div id="passkeys-list" style="margin-top:10px;"></div>
+                        <div id="passkeys-list" style="margin-top:10px;" aria-live="polite"></div>
                     </section>
                 </div>
             </div>
         </div>
 
-        <!-- Modals -->
-        <div id="add-standard-modal" class="modal hidden" aria-hidden="true">
+        <!-- Add Standard Modal -->
+        <div id="add-standard-modal"
+             class="modal hidden"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="add-standard-modal-title"
+             aria-hidden="true">
+            <div class="modal-backdrop" data-close-modal="add-standard-modal"></div>
             <div class="modal-content">
-                <h3>Add Jazz Standard</h3>
-                <form id="add-standard-form">
-                    <input type="text" id="new-standard-title" placeholder="Title" required>
-                    <input type="text" id="new-standard-composer" placeholder="Composer" required>
-                    <textarea id="new-standard-note" placeholder="Additional Note (optional)"></textarea>
+                <button class="modal-close" data-close-modal="add-standard-modal" aria-label="Close dialog">✕</button>
+                <h3 id="add-standard-modal-title">Add Jazz Standard</h3>
+                <form id="add-standard-form" novalidate>
+                    <label for="new-standard-title">Title <span aria-hidden="true">*</span></label>
+                    <input type="text" id="new-standard-title" placeholder="e.g. Autumn Leaves" required>
+                    <label for="new-standard-composer">Composer <span aria-hidden="true">*</span></label>
+                    <input type="text" id="new-standard-composer" placeholder="e.g. Joseph Kosma" required>
+                    <label for="new-standard-style">Style <span aria-hidden="true">*</span></label>
                     <select id="new-standard-style" required>
                         <option value="">Select Style</option>
                         <option value="swing">Swing</option>
@@ -170,40 +177,52 @@
                         <option value="latin_swing">Latin Swing</option>
                         <option value="free">Free</option>
                     </select>
+                    <label for="new-standard-note">Additional Note</label>
+                    <textarea id="new-standard-note" placeholder="Optional notes…"></textarea>
                     <div class="modal-buttons">
-                        <button type="submit">Add</button>
-                        <button type="button" class="cancel">Cancel</button>
+                        <button type="submit">Add Standard</button>
+                        <button type="button" class="cancel" data-close-modal="add-standard-modal">Cancel</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <div id="add-category-modal" class="modal hidden" aria-hidden="true">
+        <!-- Add Category Modal -->
+        <div id="add-category-modal"
+             class="modal hidden"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="add-category-modal-title"
+             aria-hidden="true">
+            <div class="modal-backdrop" data-close-modal="add-category-modal"></div>
             <div class="modal-content">
-                <h3>Add Category</h3>
-                <form id="add-category-form">
-                    <input type="text" id="new-category-name" placeholder="Category Name" required>
-                    <input type="color" id="new-category-color" value="#4a90e2">
+                <button class="modal-close" data-close-modal="add-category-modal" aria-label="Close dialog">✕</button>
+                <h3 id="add-category-modal-title">Add Category</h3>
+                <form id="add-category-form" novalidate>
+                    <label for="new-category-name">Category Name <span aria-hidden="true">*</span></label>
+                    <input type="text" id="new-category-name" placeholder="e.g. Beginner Tunes" required>
+                    <label for="new-category-color">Color</label>
+                    <div class="color-row">
+                        <input type="color" id="new-category-color" value="#4a90e2">
+                        <span id="color-preview-label">#4a90e2</span>
+                    </div>
                     <div class="modal-buttons">
-                        <button type="submit">Add</button>
-                        <button type="button" class="cancel">Cancel</button>
+                        <button type="submit">Add Category</button>
+                        <button type="button" class="cancel" data-close-modal="add-category-modal">Cancel</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div id="offline-indicator" class="hidden" aria-hidden="true">Offline</div>
+    <div id="offline-indicator" class="hidden" role="status" aria-live="assertive" aria-hidden="true">⚠ Offline</div>
 
     <script type="module" src="static/js/app.js"></script>
     <script>
-        // To enable debug mode, open browser console and run: window.DEBUG = true
-        // This will show detailed logs for API requests and responses
-        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker registered', reg))
-                .catch(err => console.log('Service Worker registration failed', err));
+                .then(reg => console.log('SW registered', reg))
+                .catch(err => console.log('SW failed', err));
         }
     </script>
 </body>
