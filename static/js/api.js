@@ -247,6 +247,45 @@ const API = {
     async deletePassKey(id) {
         return this.request(`/users/me/passkeys/${id}`, { method: 'DELETE' });
     },
+
+    // Social – Follow / Unfollow
+    async followUser(username) {
+        return this.request(`/users/${encodeURIComponent(username)}/follow`, { method: 'POST' });
+    },
+
+    async unfollowUser(username) {
+        return this.request(`/users/${encodeURIComponent(username)}/follow`, { method: 'DELETE' });
+    },
+
+    async isFollowing(username) {
+        return this.request(`/users/${encodeURIComponent(username)}/follow`);
+    },
+
+    async getFollowing() {
+        return this.request('/users/me/following');
+    },
+
+    async getFollowers() {
+        return this.request('/users/me/followers');
+    },
+
+    // User search by username
+    async getUserByUsername(username) {
+        return this.request(`/users/by-username/${encodeURIComponent(username)}`);
+    },
+
+    async getPublicStandards(username) {
+        return this.request(`/users/${encodeURIComponent(username)}/standards`);
+    },
+
+    // Notifications
+    async getNotifications() {
+        return this.request('/users/me/notifications');
+    },
+
+    async markNotificationsRead() {
+        return this.request('/users/me/notifications/read', { method: 'POST' });
+    },
 };
 
 export default API;

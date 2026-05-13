@@ -1,9 +1,13 @@
-const CACHE_NAME = 'jazz-standards-v1';
+const CACHE_NAME = 'jazz-standards-v2';
 const ASSETS_TO_CACHE = [
     '/',
     '/static/css/styles.css',
     '/static/js/api.js',
     '/static/js/app.js',
+    '/static/js/dom.js',
+    '/static/js/i18n.js',
+    '/static/favicon.svg',
+    '/static/icons/icon-192.png',
     '/manifest.json',
 ];
 
@@ -35,10 +39,18 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch event - serve from cache, fall back to network
+// Fetch event
 self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') {
+        return;
+    }
+
+    // Navigation requests (HTML): network-first so updates propagate immediately
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => caches.match('/'))
+        );
         return;
     }
 
@@ -47,48 +59,32 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(event.request)
                 .then((response) => {
-                    // Clone the response
                     const responseClone = response.clone();
-                    
-                    // Cache successful responses
                     if (response.status === 200) {
                         caches.open(CACHE_NAME).then((cache) => {
                             cache.put(event.request, responseClone);
                         });
                     }
-                    
                     return response;
                 })
-                .catch(() => {
-                    // If network fails, try cache
-                    return caches.match(event.request);
-                })
+                .catch(() => caches.match(event.request))
         );
         return;
     }
 
-    // For static assets, use cache-first strategy
+    // Static assets: network-first with cache fallback so updates propagate
     event.respondWith(
-        caches.match(event.request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
+        fetch(event.request)
+            .then((response) => {
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                    return response;
                 }
-                
-                return fetch(event.request)
-                    .then((response) => {
-                        // Don't cache if not a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-                        
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseClone);
-                        });
-                        
-                        return response;
-                    });
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(event.request, responseClone);
+                });
+                return response;
             })
+            .catch(() => caches.match(event.request))
     );
 });

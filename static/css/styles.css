@@ -780,3 +780,68 @@ header h1 {
     #create-passkey-form { flex-direction: column; }
     #new-passkey-name { width: 100%; }
 }
+
+/* ---- Proficiency badges ---- */
+.proficiency-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.proficiency-beginner  { background: #2a2a4a; color: #8888cc; border: 1px solid #3a3a6a; }
+.proficiency-learning  { background: #2a3a1a; color: #88bb55; border: 1px solid #3a5a2a; }
+.proficiency-know_it   { background: #3a2a1a; color: #c9a227; border: 1px solid #5a4a2a; }
+.proficiency-master    { background: #3a1a1a; color: #e05252; border: 1px solid #6a2a2a; }
+
+/* ---- Notification badge on nav ---- */
+#notif-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gold);
+    color: var(--navy);
+    border-radius: 50%;
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* ---- Unread notification highlight ---- */
+.notif-unread {
+    border-left: 3px solid var(--gold) !important;
+    background: rgba(201, 162, 39, 0.06) !important;
+}
+
+/* ---- My Standards filters row ---- */
+.my-standards-filters {
+    margin-bottom: 1rem;
+}
+
+/* ---- btn-secondary ---- */
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s;
+}
+.btn-secondary:hover { background: rgba(201,162,39,0.12); }
+
+/* ---- Locale toggle in header ---- */
+#locale-toggle-btn {
+    min-width: 42px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}

@@ -72,6 +72,7 @@ func registerRoutes(r *mux.Router, basePath string) {
 	api.HandleFunc("/users/me", middleware.RequireAuth(handlers.GetMe)).Methods("GET")
 	api.HandleFunc("/users/me", middleware.RequireAuth(handlers.UpdateMe)).Methods("PATCH")
 	api.HandleFunc("/users", middleware.RequireAdmin(handlers.ListUsers)).Methods("GET")
+	api.HandleFunc("/users/by-username/{username}", middleware.RequireAuth(handlers.GetUserByUsername)).Methods("GET")
 	api.HandleFunc("/users/{id:[0-9]+}", middleware.RequireAuth(handlers.DeleteUser)).Methods("DELETE")
 
 	// ── Pass Keys ─────────────────────────────────────────────────────────────
@@ -110,6 +111,17 @@ func registerRoutes(r *mux.Router, basePath string) {
 	// Public profile – another user's list (only if public_profile=true)
 	api.HandleFunc("/users/{username}/standards",
 		middleware.RequireAuth(handlers.GetPublicUserStandards)).Methods("GET")
+
+	// ── Follow / Social ───────────────────────────────────────────────────────
+	api.HandleFunc("/users/{username}/follow", middleware.RequireAuth(handlers.FollowUser)).Methods("POST")
+	api.HandleFunc("/users/{username}/follow", middleware.RequireAuth(handlers.UnfollowUser)).Methods("DELETE")
+	api.HandleFunc("/users/{username}/follow", middleware.RequireAuth(handlers.IsFollowing)).Methods("GET")
+	api.HandleFunc("/users/me/following", middleware.RequireAuth(handlers.GetFollowing)).Methods("GET")
+	api.HandleFunc("/users/me/followers", middleware.RequireAuth(handlers.GetFollowers)).Methods("GET")
+
+	// ── Notifications ─────────────────────────────────────────────────────────
+	api.HandleFunc("/users/me/notifications", middleware.RequireAuth(handlers.GetNotifications)).Methods("GET")
+	api.HandleFunc("/users/me/notifications/read", middleware.RequireAuth(handlers.MarkNotificationsRead)).Methods("POST")
 
 	// ── Practice Logs ─────────────────────────────────────────────────────────
 	api.HandleFunc("/users/me/standards/{standard_id:[0-9]+}/practice",

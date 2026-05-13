@@ -7,6 +7,9 @@
     <title>Jazz Standards DB</title>
     <base href="{{BASE_PATH}}">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="static/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="static/icons/icon-192.png">
     <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
@@ -50,21 +53,53 @@
                 <h1>🎷 Jazz Standards DB</h1>
                 <div class="user-info">
                     <span id="user-name" aria-label="Logged in user"></span>
-                    <button id="logout-btn">Logout</button>
+                    <button id="locale-toggle-btn" class="btn-secondary" aria-label="Toggle language" title="Switch language">EN</button>
+                    <button id="logout-btn" data-i18n="logout">Logout</button>
                 </div>
             </header>
 
             <nav class="main-nav" aria-label="Main navigation">
-                <button class="nav-btn active" data-view="my-standards">My Standards</button>
-                <button class="nav-btn" data-view="all-standards">All Standards</button>
-                <button class="nav-btn" data-view="categories">Categories</button>
-                <button class="nav-btn" data-view="settings">Settings</button>
-                <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true">⏳ Pending</button>
+                <button class="nav-btn active" data-view="my-standards" data-i18n="nav_my_standards">My Standards</button>
+                <button class="nav-btn" data-view="all-standards" data-i18n="nav_all_standards">All Standards</button>
+                <button class="nav-btn" data-view="categories" data-i18n="nav_categories">Categories</button>
+                <button class="nav-btn" data-view="friends" data-i18n="nav_friends">Friends</button>
+                <button class="nav-btn" data-view="notifications" data-i18n="nav_notifications">🔔 <span id="notif-badge" class="hidden"></span></button>
+                <button class="nav-btn" data-view="settings" data-i18n="nav_settings">Settings</button>
+                <button class="nav-btn admin-only hidden" data-view="pending" aria-hidden="true" data-i18n="nav_pending">⏳ Pending</button>
             </nav>
 
             <div id="my-standards-view" class="view active" aria-hidden="false" role="region" aria-label="My Standards">
                 <div class="container">
-                    <h2>My Standards</h2>
+                    <h2 data-i18n="my_standards_heading">My Standards</h2>
+                    <div class="search-controls my-standards-filters">
+                        <label for="my-style-filter" class="sr-only" data-i18n="filter_style">Style</label>
+                        <select id="my-style-filter">
+                            <option value="" data-i18n="all_styles">All Styles</option>
+                            <option value="swing" data-i18n="style_swing">Swing</option>
+                            <option value="bebop" data-i18n="style_bebop">Bebop</option>
+                            <option value="bossa_nova" data-i18n="style_bossa_nova">Bossa Nova</option>
+                            <option value="latin" data-i18n="style_latin">Latin</option>
+                            <option value="modal" data-i18n="style_modal">Modal</option>
+                            <option value="waltz" data-i18n="style_waltz">Waltz</option>
+                            <option value="fusion" data-i18n="style_fusion">Fusion</option>
+                            <option value="dixieland" data-i18n="style_dixieland">Dixieland</option>
+                            <option value="ragtime" data-i18n="style_ragtime">Ragtime</option>
+                            <option value="big_band" data-i18n="style_big_band">Big Band</option>
+                            <option value="samba" data-i18n="style_samba">Samba</option>
+                            <option value="latin_swing" data-i18n="style_latin_swing">Latin Swing</option>
+                            <option value="free" data-i18n="style_free">Free</option>
+                        </select>
+                        <label for="my-composer-filter" class="sr-only" data-i18n="filter_composer">Composer</label>
+                        <input type="search" id="my-composer-filter" placeholder="Filter by composer…" data-i18n-placeholder="filter_composer_placeholder">
+                        <label for="my-proficiency-filter" class="sr-only" data-i18n="filter_proficiency">Proficiency</label>
+                        <select id="my-proficiency-filter">
+                            <option value="" data-i18n="all_proficiencies">All Levels</option>
+                            <option value="beginner" data-i18n="prof_beginner">Beginner</option>
+                            <option value="learning" data-i18n="prof_learning">Learning</option>
+                            <option value="know_it" data-i18n="prof_know_it">Know It</option>
+                            <option value="master" data-i18n="prof_master">Master</option>
+                        </select>
+                    </div>
                     <div id="standards-by-category" aria-live="polite"></div>
                 </div>
             </div>
@@ -104,6 +139,29 @@
                     <h2>⏳ Pending Approvals</h2>
                     <p class="muted">Review and approve/reject standards submitted by users.</p>
                     <div id="pending-standards-list" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div id="friends-view" class="view hidden" aria-hidden="true" role="region" aria-label="Friends">
+                <div class="container">
+                    <h2 data-i18n="nav_friends">Friends</h2>
+                    <div class="search-controls">
+                        <input type="search" id="friend-search-input" placeholder="Search by username…" data-i18n-placeholder="friend_search_placeholder">
+                        <button id="friend-search-btn" data-i18n="search_btn">Search</button>
+                    </div>
+                    <div id="friend-search-results" aria-live="polite"></div>
+                    <h3 data-i18n="following_heading" style="margin-top:1.5rem;">People I Follow</h3>
+                    <div id="following-list" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div id="notifications-view" class="view hidden" aria-hidden="true" role="region" aria-label="Notifications">
+                <div class="container">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                        <h2 data-i18n="nav_notifications">Notifications</h2>
+                        <button id="mark-read-btn" data-i18n="mark_all_read">Mark all read</button>
+                    </div>
+                    <div id="notifications-list" aria-live="polite"></div>
                 </div>
             </div>
 
@@ -224,6 +282,7 @@
 
     <div id="offline-indicator" class="hidden" role="status" aria-live="assertive" aria-hidden="true">⚠ Offline</div>
 
+    <script type="module" src="static/js/i18n.js"></script>
     <script type="module" src="static/js/app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {

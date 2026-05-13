@@ -65,6 +65,8 @@ func AutoMigrate() error {
 		&models.PracticeLog{},
 		&models.PersonalPiece{},
 		&models.ComposedTune{},
+		&models.Follow{},
+		&models.Notification{},
 	)
 	if err != nil {
 		return err

@@ -100,6 +100,16 @@ func AddUserStandard(w http.ResponseWriter, r *http.Request) {
 	database.DB.Preload("JazzStandard").Preload("Category").
 		First(&us, "user_id = ? AND jazz_standard_id = ?", user.ID, standardID)
 
+	// Notify followers if proficiency is know_it or master
+	if us.Proficiency == models.ProficiencyKnowIt || us.Proficiency == models.ProficiencyMaster {
+		actionType := "learned"
+		if us.Proficiency == models.ProficiencyMaster {
+			actionType = "mastered"
+		}
+		sid := uint(standardID)
+		go CreateFollowerNotifications(user.ID, &sid, actionType)
+	}
+
 	utils.RespondJSON(w, http.StatusCreated, us)
 }
 
@@ -231,6 +241,20 @@ func UpdateUserStandard(w http.ResponseWriter, r *http.Request) {
 		utils.RespondError(w, http.StatusInternalServerError, "Failed to update standard")
 		return
 	}
+
+	// Notify followers if proficiency changed to know_it or master
+	if req.Proficiency != nil {
+		newProf := models.Proficiency(*req.Proficiency)
+		if newProf == models.ProficiencyKnowIt || newProf == models.ProficiencyMaster {
+			actionType := "learned"
+			if newProf == models.ProficiencyMaster {
+				actionType = "mastered"
+			}
+			sid := uint(standardID)
+			go CreateFollowerNotifications(user.ID, &sid, actionType)
+		}
+	}
+
 	database.DB.Preload("JazzStandard").Preload("Category").
 		First(&us, "user_id = ? AND jazz_standard_id = ?", user.ID, standardID)
 	utils.RespondJSON(w, http.StatusOK, us)

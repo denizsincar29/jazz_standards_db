@@ -41,6 +41,18 @@ export default {
                 case 'remove-my':
                     window.removeStandard && window.removeStandard(Number(id));
                     break;
+                case 'follow':
+                    const followUsername = btn.getAttribute('data-username');
+                    window.followUser && window.followUser(followUsername);
+                    break;
+                case 'unfollow':
+                    const unfollowUsername = btn.getAttribute('data-username');
+                    window.unfollowUser && window.unfollowUser(unfollowUsername);
+                    break;
+                case 'view-profile':
+                    const profileUsername = btn.getAttribute('data-username');
+                    window.loadPublicProfile && window.loadPublicProfile(profileUsername);
+                    break;
                 default:
                     break;
             }

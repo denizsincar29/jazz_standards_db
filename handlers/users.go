@@ -101,3 +101,20 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.RespondSuccess(w, "User deleted successfully", nil)
 }
+
+// GetUserByUsername returns basic public info for a user by username.
+// GET /api/users/by-username/{username}
+func GetUserByUsername(w http.ResponseWriter, r *http.Request) {
+	username := mux.Vars(r)["username"]
+	var target models.User
+	if err := database.DB.Where("username = ?", username).First(&target).Error; err != nil {
+		utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+	utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"id":             target.ID,
+		"username":       target.Username,
+		"name":           target.Name,
+		"public_profile": target.PublicProfile,
+	})
+}
