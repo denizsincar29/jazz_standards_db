@@ -99,11 +99,14 @@ _write_key() {
     echo "${key}=${val}"
 }
 
+# prompt_field KEY DESCRIPTION DEFAULT IS_SECRET OPTIONAL
+#   OPTIONAL=1 → empty input is accepted (field may be left blank)
 prompt_field() {
     local key="$1"
     local description="$2"
     local default="$3"
     local is_secret="${4:-0}"
+    local optional="${5:-0}"
 
     local current="${ENV_VALS[$key]:-}"
 
@@ -121,6 +124,8 @@ prompt_field() {
     local prompt_str
     if [[ -n "$default" ]]; then
         prompt_str="  ${description} [${key}] (default: ${default}): "
+    elif [[ "$optional" == "1" ]]; then
+        prompt_str="  ${description} [${key}] (optional, press Enter to skip): "
     else
         prompt_str="  ${description} [${key}] (required): "
     fi
@@ -134,9 +139,14 @@ prompt_field() {
             read -rp "$prompt_str" value
         fi
 
-        # Use default if user pressed Enter on an optional field.
+        # Use default if user pressed Enter and a default exists.
         if [[ -z "$value" && -n "$default" ]]; then
             value="$default"
+        fi
+
+        # Accept empty input for optional fields.
+        if [[ -z "$value" && "$optional" == "1" ]]; then
+            break
         fi
 
         if [[ -n "$value" ]]; then
@@ -147,7 +157,11 @@ prompt_field() {
     done
 
     ENV_VALS["$key"]="$value"
-    info "  ${key} set."
+    if [[ -n "$value" ]]; then
+        info "  ${key} set."
+    else
+        info "  ${key} left blank."
+    fi
 }
 
 ensure_env() {
@@ -186,8 +200,8 @@ ensure_env() {
     prompt_field PORT         "HTTP listen port"       "8000"       0
     prompt_field JWT_SECRET   "JWT signing secret"     ""           1
     prompt_field ENVIRONMENT  "Environment (development|production)" "production" 0
-    prompt_field BASE_PATH    "URL base path (e.g. /jazz, or leave blank)" "" 0
-    prompt_field TEST_API     "Enable test-API page? (1=yes, blank=no)"   "" 0
+    prompt_field BASE_PATH    "URL base path (e.g. /jazz, or leave blank)" "" 0 1
+    prompt_field TEST_API     "Enable test-API page? (1=yes, blank=no)"   "" 0 1
 
     # ── WebAuthn ──────────────────────────────────────────────────────────
     # Derive a sensible RPID default from BASE_PATH or just "localhost".
@@ -201,8 +215,8 @@ ensure_env() {
 
     # ── ntfy (optional) ───────────────────────────────────────────────────
     prompt_field NTFY_URL    "ntfy server URL"         "https://ntfy.sh" 0
-    prompt_field NTFY_TOPIC  "ntfy topic (leave blank to disable)" "" 0
-    prompt_field NTFY_TOKEN  "ntfy Bearer token (if topic is protected)" "" 1
+    prompt_field NTFY_TOPIC  "ntfy topic (leave blank to disable)" "" 0 1
+    prompt_field NTFY_TOKEN  "ntfy Bearer token (if topic is protected)" "" 1 1
 
     echo ""
 
