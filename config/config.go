@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -23,6 +24,9 @@ type Config struct {
 	NtfyURL   string // e.g. https://ntfy.sh
 	NtfyTopic string // e.g. jazz_admin_alerts
 	NtfyToken string // optional Bearer token if topic is protected
+	// WebAuthn
+	RPID      string   // Relying Party ID – plain domain, e.g. "example.com"
+	RPOrigins []string // Allowed origins, e.g. ["https://example.com"]
 }
 
 var AppConfig *Config
@@ -47,6 +51,8 @@ func Load() error {
 		NtfyURL:     getEnv("NTFY_URL", "https://ntfy.sh"),
 		NtfyTopic:   getEnv("NTFY_TOPIC", ""),
 		NtfyToken:   getEnv("NTFY_TOKEN", ""),
+		RPID:        getEnv("WEBAUTHN_RPID", "localhost"),
+		RPOrigins:   splitCSV(getEnv("WEBAUTHN_ORIGINS", "http://localhost:8000")),
 	}
 
 	return nil
@@ -68,4 +74,19 @@ func (c *Config) GetDSN() string {
 // NtfyEnabled returns true when ntfy notifications are configured.
 func (c *Config) NtfyEnabled() bool {
 	return c.NtfyTopic != ""
+}
+
+// splitCSV splits a comma-separated string into a trimmed slice.
+func splitCSV(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }

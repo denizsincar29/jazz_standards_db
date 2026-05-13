@@ -211,22 +211,41 @@ const API = {
         return this.request(`/jazz_standards/${id}/reject`, { method: 'POST' });
     },
 
-    // Passkeys / Profile
+    // Passkeys – WebAuthn registration (requires active session)
+    async beginPasskeyRegistration() {
+        return this.request('/users/me/passkeys/begin', { method: 'POST' });
+    },
+
+    async finishPasskeyRegistration(name, credentialJSON) {
+        // Merge the "name" label into the credential payload.
+        const body = { name, ...credentialJSON };
+        return this.request('/users/me/passkeys/finish', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    },
+
+    // Passkeys – WebAuthn authentication (no session needed)
+    async beginPasskeyAuth(username) {
+        return this.request('/auth/passkey/begin', {
+            method: 'POST',
+            body: JSON.stringify({ username }),
+        });
+    },
+
+    async finishPasskeyAuth(username, assertionJSON) {
+        return this.request(`/auth/passkey/finish?username=${encodeURIComponent(username)}`, {
+            method: 'POST',
+            body: JSON.stringify(assertionJSON),
+        });
+    },
+
     async listPassKeys() {
         return this.request('/users/me/passkeys');
     },
 
-    async createPassKey(name) {
-        return this.request('/users/me/passkeys', {
-            method: 'POST',
-            body: JSON.stringify({ name }),
-        });
-    },
-
     async deletePassKey(id) {
-        return this.request(`/users/me/passkeys/${id}`, {
-            method: 'DELETE',
-        });
+        return this.request(`/users/me/passkeys/${id}`, { method: 'DELETE' });
     },
 };
 

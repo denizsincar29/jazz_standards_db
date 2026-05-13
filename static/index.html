@@ -26,6 +26,9 @@
                     <label for="login-password" class="sr-only">Password</label>
                     <input type="password" id="login-password" autocomplete="current-password" placeholder="Password" required>
                     <button type="submit">Sign In</button>
+                    <button type="button" id="passkey-login-btn" class="btn-secondary" style="margin-top:8px;">
+                        🔑 Sign in with Passkey
+                    </button>
                     <p class="error" id="login-error" role="alert" aria-live="polite"></p>
                 </form>
                 <form id="register-form" class="auth-form" aria-label="Register form">
@@ -132,11 +135,15 @@
                         </form>
                     </section>
                     <section aria-labelledby="passkeys-heading" style="margin-top:28px;">
-                        <h3 id="passkeys-heading">Pass Keys</h3>
-                        <form id="create-passkey-form" aria-label="Create pass key">
-                            <label for="new-passkey-name" class="sr-only">Key name</label>
-                            <input type="text" id="new-passkey-name" placeholder="Key name" required>
-                            <button type="submit">Create Pass Key</button>
+                        <h3 id="passkeys-heading">Passkeys (Face ID / Touch ID / Windows Hello)</h3>
+                        <p class="muted" style="font-size:0.9em;margin-bottom:8px;">
+                            Register your device's biometric sensor as a login method.
+                            You'll be prompted by your OS to authenticate when logging in.
+                        </p>
+                        <form id="create-passkey-form" aria-label="Register passkey">
+                            <label for="new-passkey-name" class="sr-only">Passkey name</label>
+                            <input type="text" id="new-passkey-name" placeholder='Label, e.g. "MacBook Touch ID"' required>
+                            <button type="submit">Register Passkey</button>
                         </form>
                         <div id="passkeys-list" style="margin-top:10px;" aria-live="polite"></div>
                     </section>

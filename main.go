@@ -64,6 +64,9 @@ func registerRoutes(r *mux.Router, basePath string) {
 	api.HandleFunc("/register", handlers.Register).Methods("POST")
 	api.HandleFunc("/login", handlers.Login).Methods("POST")
 	api.HandleFunc("/logout", middleware.RequireAuth(handlers.Logout)).Methods("POST")
+	// WebAuthn passkey authentication (no prior session needed)
+	api.HandleFunc("/auth/passkey/begin", handlers.BeginAuthentication).Methods("POST")
+	api.HandleFunc("/auth/passkey/finish", handlers.FinishAuthentication).Methods("POST")
 
 	// ── Users ──────────────────────────────────────────────────────────────────
 	api.HandleFunc("/users/me", middleware.RequireAuth(handlers.GetMe)).Methods("GET")
@@ -72,7 +75,10 @@ func registerRoutes(r *mux.Router, basePath string) {
 	api.HandleFunc("/users/{id:[0-9]+}", middleware.RequireAuth(handlers.DeleteUser)).Methods("DELETE")
 
 	// ── Pass Keys ─────────────────────────────────────────────────────────────
-	api.HandleFunc("/users/me/passkeys", middleware.RequireAuth(handlers.CreatePassKey)).Methods("POST")
+	// WebAuthn registration (requires session)
+	api.HandleFunc("/users/me/passkeys/begin", middleware.RequireAuth(handlers.BeginRegistration)).Methods("POST")
+	api.HandleFunc("/users/me/passkeys/finish", middleware.RequireAuth(handlers.FinishRegistration)).Methods("POST")
+	// List / delete (unchanged)
 	api.HandleFunc("/users/me/passkeys", middleware.RequireAuth(handlers.ListPassKeys)).Methods("GET")
 	api.HandleFunc("/users/me/passkeys/{id:[0-9]+}", middleware.RequireAuth(handlers.DeletePassKey)).Methods("DELETE")
 

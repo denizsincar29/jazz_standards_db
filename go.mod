@@ -3,6 +3,7 @@ module github.com/denizsincar29/jazz_standards_db
 go 1.22
 
 require (
+	github.com/go-webauthn/webauthn v0.11.2
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.28.0

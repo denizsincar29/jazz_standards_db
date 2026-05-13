@@ -152,6 +152,21 @@ body {
 .auth-form button[type="submit"]:hover { background: var(--gold-light); }
 .auth-form button[type="submit"]:active { transform: scale(0.98); }
 
+/* Secondary action button (e.g. "Login with Passkey") */
+.btn-secondary {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.btn-secondary:hover { background: var(--gold); color: var(--navy-dark); }
+
 .error {
     color: var(--red);
     font-size: 0.87rem;

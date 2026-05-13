@@ -62,6 +62,10 @@ function setupEventListeners() {
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('register-form').addEventListener('submit', handleRegister);
 
+    // Passkey login button (optional — only present if WebAuthn supported)
+    const passkeyLoginBtn = document.getElementById('passkey-login-btn');
+    if (passkeyLoginBtn) passkeyLoginBtn.addEventListener('click', handlePasskeyLogin);
+
     // Logout
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
@@ -251,6 +255,50 @@ async function handleLogin(e) {
         await loadMyStandards();
     } catch (error) {
         debugPrint('Login error:', error);
+        errorEl.textContent = error.message;
+    }
+}
+
+async function handlePasskeyLogin() {
+    if (!window.PublicKeyCredential) {
+        alert('WebAuthn / passkeys are not supported in this browser.');
+        return;
+    }
+    const username = document.getElementById('login-username').value.trim();
+    const errorEl = document.getElementById('login-error');
+    errorEl.textContent = '';
+
+    if (!username) {
+        errorEl.textContent = 'Enter your username first, then click "Login with Passkey".';
+        return;
+    }
+
+    try {
+        // 1. Get challenge.
+        const options = await API.beginPasskeyAuth(username);
+
+        // 2. Prompt the authenticator.
+        const requestOptions = prepareRequestOptions(options);
+        let assertion;
+        try {
+            assertion = await navigator.credentials.get(requestOptions);
+        } catch (credErr) {
+            if (credErr.name === 'NotAllowedError') {
+                errorEl.textContent = 'Passkey login was cancelled or timed out.';
+            } else {
+                errorEl.textContent = 'Passkey login failed: ' + credErr.message;
+            }
+            return;
+        }
+
+        // 3. Verify on server.
+        const assertionJSON = serializeAssertion(assertion);
+        const data = await API.finishPasskeyAuth(username, assertionJSON);
+        if (data.token) API.setToken(data.token);
+        currentUser = data.user;
+        showMainScreen();
+        await loadMyStandards();
+    } catch (error) {
         errorEl.textContent = error.message;
     }
 }
@@ -499,18 +547,134 @@ async function handleUpdateProfile(e) {
     }
 }
 
+// ── WebAuthn helpers ────────────────────────────────────────────────────────
+
+/**
+ * Convert a base64url string to a Uint8Array (used for challenge/id decoding).
+ */
+function base64urlToBuffer(base64url) {
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const binary = atob(base64);
+    const buffer = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i);
+    return buffer.buffer;
+}
+
+/**
+ * Convert an ArrayBuffer to a base64url string (used for encoding credential IDs/responses).
+ */
+function bufferToBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let str = '';
+    for (const b of bytes) str += String.fromCharCode(b);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+/**
+ * Prepare the server-issued PublicKeyCredentialCreationOptions for the browser API.
+ * Decodes base64url-encoded binary fields back to ArrayBuffers.
+ */
+function prepareCreationOptions(opts) {
+    // The server wraps the options in {publicKey: {...}}
+    const pk = opts.publicKey || opts;
+    pk.challenge = base64urlToBuffer(pk.challenge);
+    pk.user.id = base64urlToBuffer(pk.user.id);
+    if (pk.excludeCredentials) {
+        pk.excludeCredentials = pk.excludeCredentials.map(c => ({
+            ...c,
+            id: base64urlToBuffer(c.id),
+        }));
+    }
+    return { publicKey: pk };
+}
+
+/**
+ * Prepare the server-issued PublicKeyCredentialRequestOptions for the browser API.
+ */
+function prepareRequestOptions(opts) {
+    const pk = opts.publicKey || opts;
+    pk.challenge = base64urlToBuffer(pk.challenge);
+    if (pk.allowCredentials) {
+        pk.allowCredentials = pk.allowCredentials.map(c => ({
+            ...c,
+            id: base64urlToBuffer(c.id),
+        }));
+    }
+    return { publicKey: pk };
+}
+
+/**
+ * Serialize a PublicKeyCredential (creation response) to plain JSON.
+ */
+function serializeCredential(cred) {
+    return {
+        id: cred.id,
+        rawId: bufferToBase64url(cred.rawId),
+        type: cred.type,
+        response: {
+            attestationObject: bufferToBase64url(cred.response.attestationObject),
+            clientDataJSON: bufferToBase64url(cred.response.clientDataJSON),
+        },
+    };
+}
+
+/**
+ * Serialize a PublicKeyCredential (authentication response) to plain JSON.
+ */
+function serializeAssertion(cred) {
+    return {
+        id: cred.id,
+        rawId: bufferToBase64url(cred.rawId),
+        type: cred.type,
+        response: {
+            authenticatorData: bufferToBase64url(cred.response.authenticatorData),
+            clientDataJSON: bufferToBase64url(cred.response.clientDataJSON),
+            signature: bufferToBase64url(cred.response.signature),
+            userHandle: cred.response.userHandle ? bufferToBase64url(cred.response.userHandle) : null,
+        },
+    };
+}
+
+// ── Passkey handlers ─────────────────────────────────────────────────────────
+
 async function handleCreatePassKey(e) {
     e.preventDefault();
-    const name = document.getElementById('new-passkey-name').value;
-    if (!name) { alert('Name is required'); return; }
+
+    if (!window.PublicKeyCredential) {
+        alert('WebAuthn / passkeys are not supported in this browser.\nUse Chrome, Safari, Firefox, or Edge on a modern OS.');
+        return;
+    }
+
+    const name = document.getElementById('new-passkey-name').value.trim();
+    if (!name) { alert('Please enter a name for this passkey.'); return; }
+
     try {
-        const data = await API.createPassKey(name);
-        if (data.token) alert(`Pass key created. Save this token now:\n\n${data.token}`);
-        else if (data.message) alert(data.message);
+        // 1. Get the challenge from the server.
+        const options = await API.beginPasskeyRegistration();
+
+        // 2. Ask the browser / authenticator to create a credential.
+        const creationOptions = prepareCreationOptions(options);
+        let credential;
+        try {
+            credential = await navigator.credentials.create(creationOptions);
+        } catch (credErr) {
+            if (credErr.name === 'NotAllowedError') {
+                alert('Passkey creation was cancelled or timed out.');
+            } else {
+                alert('Passkey creation failed: ' + credErr.message);
+            }
+            return;
+        }
+
+        // 3. Send the attestation response to the server.
+        const credJSON = serializeCredential(credential);
+        await API.finishPasskeyRegistration(name, credJSON);
+
+        alert(`Passkey "${name}" registered! You can now log in with biometrics.`);
         document.getElementById('create-passkey-form').reset();
         await loadSettings();
     } catch (error) {
-        alert(error.message);
+        alert('Error registering passkey: ' + error.message);
     }
 }
 

@@ -44,6 +44,9 @@ main() {
     local install_dir
     install_dir="$(detect_install_dir)"
 
+    info "Tidying Go modules (updates go.sum for new dependencies)"
+    go mod tidy
+
     info "Building binary"
     export GOFLAGS="-mod=mod"
     go build -o jazz_standards_db .
@@ -56,7 +59,8 @@ main() {
     sudo cp jazz_standards_db "$install_dir/jazz_standards_db"
     sudo chmod +x "$install_dir/jazz_standards_db"
 
-    for d in static scripts; do
+    # Copy static assets, scripts, tests, and cmd tools
+    for d in static scripts tests cmd; do
         if [[ -d "${SCRIPT_DIR}/${d}" ]]; then
             sudo rm -rf "${install_dir}/${d}"
             sudo cp -r "${SCRIPT_DIR}/${d}" "${install_dir}/${d}"
