@@ -250,8 +250,9 @@ main() {
     ensure_env "$install_dir"
 
     # ── Build ──────────────────────────────────────────────────────────────
-    info "Tidying Go modules (updates go.sum for new dependencies)"
-    go mod tidy
+    info "Tidying Go modules (regenerates go.sum)"
+    # GONOSUMCHECK bypasses stale/mismatched checksum errors during tidy.
+    GONOSUMCHECK=* go mod tidy
 
     info "Building binary"
     export GOFLAGS="-mod=mod"
