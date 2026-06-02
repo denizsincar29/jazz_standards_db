@@ -197,7 +197,7 @@ ensure_env() {
     prompt_field DB_NAME      "PostgreSQL database"    "jazz"       0
 
     # ── Application ───────────────────────────────────────────────────────
-    prompt_field PORT         "HTTP listen port"       "8000"       0
+    prompt_field PORT         "HTTP listen port"       "5251"       0
     prompt_field JWT_SECRET   "JWT signing secret"     ""           1
     prompt_field ENVIRONMENT  "Environment (development|production)" "production" 0
     prompt_field BASE_PATH    "URL base path (e.g. /jazz, or leave blank)" "" 0 1
